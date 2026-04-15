@@ -1,0 +1,1438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Space Data Dashboard — Full-Stack Tutorial</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --border2: #484f58;
+    --text: #e6edf3; --text2: #8b949e; --text3: #6e7681;
+    --purple: #a371f7; --purple-bg: #1f1035; --purple-border: #6e40c9;
+    --blue: #58a6ff; --blue-bg: #0d2149; --blue-border: #1f6feb;
+    --green: #3fb950; --green-bg: #0a2818; --green-border: #238636;
+    --amber: #d29922; --amber-bg: #271e00; --amber-border: #9e6a03;
+    --coral: #f78166; --coral-bg: #3b0d0c; --coral-border: #da3633;
+    --teal: #39d353; --teal-bg: #0a2818;
+    --radius: 8px; --radius-lg: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); line-height: 1.65; }
+
+  /* Layout */
+  .shell { display: flex; min-height: 100vh; }
+  nav { width: 260px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 20px 0; }
+  main { flex: 1; max-width: 860px; padding: 40px 48px; overflow-x: hidden; }
+
+  /* Nav */
+  .nav-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); padding: 4px 20px 8px; margin-top: 16px; }
+  .nav-title:first-child { margin-top: 0; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 6px 20px; font-size: 13px; color: var(--text2); cursor: pointer; border-left: 2px solid transparent; transition: all .15s; }
+  .nav-item:hover { color: var(--text); background: var(--bg3); }
+  .nav-item.active { color: var(--blue); border-left-color: var(--blue); background: rgba(88,166,255,.06); }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border2); flex-shrink: 0; }
+  .nav-item.active .nav-dot { background: var(--blue); }
+
+  /* Sections */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Typography */
+  h1 { font-size: 26px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  h2 { font-size: 20px; font-weight: 600; color: var(--text); margin: 32px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 15px; font-weight: 600; color: var(--text); margin: 24px 0 8px; }
+  p { color: var(--text2); margin-bottom: 12px; font-size: 14.5px; }
+  strong { color: var(--text); }
+  ul, ol { color: var(--text2); font-size: 14.5px; padding-left: 20px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; }
+
+  /* Code */
+  pre { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; overflow-x: auto; margin: 16px 0; position: relative; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; line-height: 1.7; }
+  :not(pre) > code { background: var(--bg3); color: var(--coral); padding: 2px 6px; border-radius: 4px; font-size: 12.5px; }
+
+  /* Syntax highlighting */
+  .kw { color: #ff7b72; } .fn { color: #d2a8ff; } .str { color: #a5d6ff; }
+  .cm { color: #6e7681; font-style: italic; } .ty { color: #79c0ff; }
+  .num { color: #79c0ff; } .op { color: #ff7b72; }
+  .at { color: #ffa657; } .vr { color: #e6edf3; } .prop { color: #79c0ff; }
+  .imp { color: #ff7b72; } .ex { color: #d2a8ff; }
+
+  /* Callouts */
+  .callout { border-radius: var(--radius); padding: 14px 16px; margin: 16px 0; border-left: 3px solid; font-size: 14px; }
+  .callout p { margin: 0; font-size: 14px; }
+  .callout-info { background: var(--blue-bg); border-color: var(--blue); }
+  .callout-info p { color: #a5c8f0; }
+  .callout-warn { background: var(--amber-bg); border-color: var(--amber); }
+  .callout-warn p { color: #d4a72c; }
+  .callout-tip { background: var(--green-bg); border-color: var(--green); }
+  .callout-tip p { color: #56d364; }
+  .callout-mentor { background: var(--purple-bg); border-color: var(--purple); }
+  .callout-mentor p { color: #c9a5f7; }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+  .badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .badge-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+  .badge-coral { background: var(--coral-bg); color: var(--coral); border: 1px solid var(--coral-border); }
+
+  /* File tree */
+  .tree { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px 20px; font-family: monospace; font-size: 13px; line-height: 2; margin: 16px 0; }
+  .tree-dir { color: var(--blue); } .tree-file { color: var(--text2); }
+  .tree-comment { color: var(--text3); }
+
+  /* Step header */
+  .step-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--blue-bg); border: 1px solid var(--blue-border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--blue); flex-shrink: 0; }
+
+  /* Section hero */
+  .hero { background: linear-gradient(135deg, #0d2149 0%, #1f1035 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px; margin-bottom: 32px; }
+  .hero h1 { margin: 0 0 8px; }
+  .hero p { margin: 0; color: var(--text2); font-size: 15px; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  /* Copy button */
+  .copy-btn { position: absolute; top: 10px; right: 10px; background: var(--bg3); border: 1px solid var(--border); color: var(--text3); border-radius: var(--radius); padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all .15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--border2); }
+
+  /* Schema table */
+  .schema-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0 20px; }
+  .schema-table th { background: var(--bg3); color: var(--text2); font-weight: 600; text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .schema-table td { padding: 7px 12px; border-bottom: 1px solid var(--border); color: var(--text2); }
+  .schema-table td:first-child { color: var(--blue); font-family: monospace; }
+  .schema-table tr:last-child td { border-bottom: none; }
+  .schema-table tr:hover td { background: var(--bg3); }
+
+  /* Flow diagram inline */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+  .flow-box { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 14px; font-size: 12.5px; color: var(--text2); }
+  .flow-arrow { color: var(--text3); font-size: 16px; }
+
+  /* Progress indicator */
+  .progress-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-bottom: 32px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--purple)); border-radius: 2px; transition: width .3s; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-title">Overview</div>
+  <div class="nav-item active" data-section="s0"><div class="nav-dot"></div>Introduction</div>
+  <div class="nav-item" data-section="s1"><div class="nav-dot"></div>System Design</div>
+
+  <div class="nav-title">Backend</div>
+  <div class="nav-item" data-section="s2"><div class="nav-dot"></div>Project Setup</div>
+  <div class="nav-item" data-section="s3"><div class="nav-dot"></div>Database Schema</div>
+  <div class="nav-item" data-section="s4"><div class="nav-dot"></div>NASA API Client</div>
+  <div class="nav-item" data-section="s5"><div class="nav-dot"></div>API Route Handlers</div>
+  <div class="nav-item" data-section="s6"><div class="nav-dot"></div>Cron Sync Job</div>
+
+  <div class="nav-title">Frontend</div>
+  <div class="nav-item" data-section="s7"><div class="nav-dot"></div>TypeScript Types</div>
+  <div class="nav-item" data-section="s8"><div class="nav-dot"></div>Server Components</div>
+  <div class="nav-item" data-section="s9"><div class="nav-dot"></div>Client Components</div>
+  <div class="nav-item" data-section="s10"><div class="nav-dot"></div>Dashboard Page</div>
+
+  <div class="nav-title">Production</div>
+  <div class="nav-item" data-section="s11"><div class="nav-dot"></div>Error Handling</div>
+  <div class="nav-item" data-section="s12"><div class="nav-dot"></div>Deployment</div>
+</nav>
+
+<main>
+
+<!-- ── SECTION 0: Intro ── -->
+<div class="section active" id="s0">
+  <div class="hero">
+    <div class="badges">
+      <span class="badge badge-blue">TypeScript</span>
+      <span class="badge badge-green">Next.js 15</span>
+      <span class="badge badge-amber">PostgreSQL</span>
+      <span class="badge badge-purple">Prisma</span>
+      <span class="badge badge-coral">NASA API</span>
+    </div>
+    <h1>🚀 Space Data Dashboard</h1>
+    <p>A senior-level walkthrough building a full-stack dashboard that displays NASA's Astronomy Photo of the Day and live asteroid data — with a PostgreSQL historical archive and cron-based background sync.</p>
+  </div>
+
+  <h2>What you'll build</h2>
+  <p>By the end of this guide you'll have a <strong>production-grade Next.js 15 app</strong> that:</p>
+  <ul>
+    <li>Fetches the NASA APOD (Astronomy Photo of the Day) and renders it with metadata</li>
+    <li>Displays near-Earth asteroid data from the NeoWs API in a filterable table</li>
+    <li>Stores every daily fetch in PostgreSQL — giving you a queryable historical archive</li>
+    <li>Runs a background cron job to populate history even when no user is online</li>
+    <li>Uses smart caching to avoid hammering the NASA API (1,000 req/day limit)</li>
+  </ul>
+
+  <h2>Prerequisite knowledge</h2>
+  <p>This guide assumes you're comfortable with:</p>
+  <ul>
+    <li>TypeScript fundamentals (generics, utility types, discriminated unions)</li>
+    <li>React patterns (Server Components vs Client Components, hooks)</li>
+    <li>SQL basics and understanding of ORMs</li>
+    <li>HTTP, REST, and async/await patterns</li>
+  </ul>
+
+  <div class="callout callout-mentor">
+    <p><strong>Mentor note:</strong> I'll explain <em>why</em> we make every architectural decision, not just what to type. At the mid-senior level, understanding the tradeoffs is more valuable than memorising syntax.</p>
+  </div>
+
+  <h2>Key tech decisions</h2>
+  <h3>Why Next.js App Router?</h3>
+  <p>The App Router's Server Components let us fetch data <em>on the server</em> before sending HTML — zero loading spinners for initial data. Route Handlers replace a separate Express server. For a dashboard like this, it collapses a 3-service architecture (frontend + BFF + API) into one coherent codebase.</p>
+
+  <h3>Why Prisma over raw SQL?</h3>
+  <p>At this scale (2–3 tables), raw SQL is perfectly fine. But Prisma gives us <strong>type-safe query results</strong> — the TypeScript types for query results are auto-generated from the schema. That's zero type-drift between the DB and your application code. It also handles migrations cleanly.</p>
+
+  <h3>Why PostgreSQL over SQLite?</h3>
+  <p>SQLite is excellent for local dev. We're choosing Postgres because: (1) JSON column support for flexible NASA response caching, (2) proper full-text search on APOD explanations if you ever want it, and (3) Vercel Postgres / Supabase / Neon all speak Postgres — deployment is trivial.</p>
+</div>
+
+<!-- ── SECTION 1: System Design ── -->
+<div class="section" id="s1">
+  <h1>System Design</h1>
+
+  <h2>Data flow walkthrough</h2>
+  <p>Let's trace a user request through the system to understand the design decisions at each hop:</p>
+
+  <div class="flow">
+    <div class="flow-box">User opens dashboard</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Next.js Server Component renders</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Check DB for today's APOD</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Cache hit? Serve from DB</div>
+  </div>
+  <div class="flow">
+    <div class="flow-box">Cache miss?</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Call NASA API</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Upsert to DB</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Return to user</div>
+  </div>
+
+  <div class="callout callout-info">
+    <p><strong>Why check DB first?</strong> NASA's free tier allows 1,000 requests/day across all API keys. Serving today's already-fetched APOD from the DB is instant (~2ms vs ~400ms) and doesn't consume API quota. The cron job pre-populates the DB so the first user of the day doesn't take the API hit.</p>
+  </div>
+
+  <h2>Caching strategy: 3-layer defence</h2>
+  <h3>Layer 1 — Next.js fetch cache (edge)</h3>
+  <p>Next.js 15 wraps native <code>fetch</code> with an extended cache. We set <code>revalidate: 3600</code> on NASA API calls. This caches at the CDN/edge layer — subsequent deploys or function restarts still serve stale data within the TTL.</p>
+
+  <h3>Layer 2 — PostgreSQL as a "smart cache"</h3>
+  <p>We write every NASA response to the DB. On each request, we first query the DB by date. This is our primary cache — it survives Next.js cache invalidations, Vercel function restarts, and API quota resets.</p>
+
+  <h3>Layer 3 — React's <code>cache()</code></h3>
+  <p>Within a single render pass, multiple Server Components might request the same data. React's <code>cache()</code> deduplicates these within a request lifecycle — the DB is only hit once per render.</p>
+
+  <h2>Database design principles</h2>
+  <p>We have three main tables. The key decisions:</p>
+  <ul>
+    <li><strong>apod_snapshots</strong>: <code>date</code> is the natural primary key (APOD is 1-per-day). We store the raw JSON as a JSONB column alongside typed columns — so we have structured queries <em>and</em> the full original payload for schema migrations.</li>
+    <li><strong>asteroids</strong>: Asteroid IDs are NASA's own string IDs (e.g. <code>"3542519"</code>). We use those as PK, not a serial — avoids unnecessary surrogate keys when a natural key exists.</li>
+    <li><strong>sync_log</strong>: A lightweight audit table that records every cron run, its status, and how many records were upserted. This is critical for ops — you can instantly see if your cron job has been silently failing.</li>
+  </ul>
+
+  <h2>API key security</h2>
+  <div class="callout callout-warn">
+    <p><strong>Never expose NASA_API_KEY to the browser.</strong> All NASA API calls happen in Server Components or Route Handlers. The key lives in <code>.env.local</code> / environment variables and is never referenced in any <code>use client</code> file. Next.js will throw at build time if you try to reference <code>process.env.NASA_API_KEY</code> in a Client Component — but don't rely on that guard.</p>
+  </div>
+</div>
+
+<!-- ── SECTION 2: Project Setup ── -->
+<div class="section" id="s2">
+  <h1>Project Setup</h1>
+
+  <h2>Scaffolding</h2>
+  <pre><code><span class="cm"># Create the Next.js app with TypeScript and App Router</span>
+npx create-next-app@latest space-dashboard \
+  --typescript \
+  --tailwind \
+  --app \
+  --src-dir \
+  --import-alias "@/*"
+
+<span class="cm"># Install dependencies</span>
+cd space-dashboard
+npm install @prisma/client prisma
+npm install zod
+npm install @tanstack/react-query  <span class="cm"># for client-side asteroid filtering</span>
+npm install date-fns                <span class="cm"># for date formatting</span>
+npm install -D @types/node</code></pre>
+
+  <div class="callout callout-info">
+    <p><strong>Why Zod?</strong> NASA's API is public and can change without notice. Zod lets us validate and parse API responses at runtime, turning a potential runtime crash into a handled error with a meaningful message.</p>
+  </div>
+
+  <h2>Project structure</h2>
+  <div class="tree">
+<span class="tree-dir">src/</span>
+<span class="tree-dir">├── app/</span>
+<span class="tree-file">│   ├── page.tsx                  </span><span class="tree-comment">← Dashboard entry (Server Component)</span>
+<span class="tree-dir">│   ├── api/</span>
+<span class="tree-file">│   │   ├── apod/route.ts         </span><span class="tree-comment">← GET /api/apod?date=YYYY-MM-DD</span>
+<span class="tree-file">│   │   ├── asteroids/route.ts    </span><span class="tree-comment">← GET /api/asteroids?start=&amp;end=</span>
+<span class="tree-file">│   │   └── cron/sync/route.ts    </span><span class="tree-comment">← POST /api/cron/sync (protected)</span>
+<span class="tree-dir">├── components/</span>
+<span class="tree-file">│   ├── ApodCard.tsx              </span><span class="tree-comment">← Server Component</span>
+<span class="tree-file">│   ├── AsteroidTable.tsx         </span><span class="tree-comment">← Client Component (filtering)</span>
+<span class="tree-file">│   └── HistoryCalendar.tsx       </span><span class="tree-comment">← Client Component</span>
+<span class="tree-dir">├── lib/</span>
+<span class="tree-file">│   ├── nasa.ts                   </span><span class="tree-comment">← NASA API client</span>
+<span class="tree-file">│   ├── db.ts                     </span><span class="tree-comment">← Prisma client singleton</span>
+<span class="tree-file">│   └── queries.ts                </span><span class="tree-comment">← Typed DB query functions</span>
+<span class="tree-dir">├── types/</span>
+<span class="tree-file">│   └── nasa.ts                   </span><span class="tree-comment">← Zod schemas + inferred types</span>
+<span class="tree-dir">prisma/</span>
+<span class="tree-file">├── schema.prisma                 </span><span class="tree-comment">← DB schema</span>
+<span class="tree-file">└── migrations/                   </span><span class="tree-comment">← Auto-generated migration files</span>
+<span class="tree-file">.env.local                        </span><span class="tree-comment">← NASA_API_KEY, DATABASE_URL</span>
+  </div>
+
+  <h2>Environment variables</h2>
+  <pre><code><span class="cm"># .env.local</span>
+<span class="vr">NASA_API_KEY</span>=<span class="str">your_key_from_api.nasa.gov</span>
+<span class="vr">DATABASE_URL</span>=<span class="str">"postgresql://user:password@localhost:5432/spacedash"</span>
+
+<span class="cm"># This one is used to protect the cron endpoint</span>
+<span class="vr">CRON_SECRET</span>=<span class="str">a-long-random-string-you-generate</span></code></pre>
+
+  <div class="callout callout-tip">
+    <p><strong>Getting a NASA API key:</strong> Register at <strong>api.nasa.gov</strong> — it's free, takes 30 seconds, and gives you 1,000 requests/day. The demo key <code>DEMO_KEY</code> works but is heavily rate-limited (30/hour) — don't use it in development.</p>
+  </div>
+
+  <h2>Initialize Prisma</h2>
+  <pre><code>npx prisma init <span class="cm"># creates prisma/schema.prisma and updates .env</span></code></pre>
+
+  <h2>Prisma client singleton — <code>src/lib/db.ts</code></h2>
+  <pre><code><span class="cm">/**
+ * Prisma Client Singleton
+ *
+ * Why a singleton? In development, Next.js hot-reload creates new module
+ * instances on every file change. Without this pattern you'd leak DB
+ * connections rapidly — Postgres has a hard connection limit (~100 by default).
+ *
+ * The pattern: store the instance on the global object (which survives
+ * hot-reload) and reuse it. In production, the module is instantiated once
+ * per process, so the global check is a no-op.
+ */</span>
+<span class="kw">import</span> { <span class="ty">PrismaClient</span> } <span class="kw">from</span> <span class="str">'@prisma/client'</span>
+
+<span class="kw">const</span> <span class="fn">createPrismaClient</span> = () =>
+  <span class="kw">new</span> <span class="fn">PrismaClient</span>({
+    log: process.env.<span class="vr">NODE_ENV</span> === <span class="str">'development'</span>
+      ? [<span class="str">'query'</span>, <span class="str">'error'</span>, <span class="str">'warn'</span>]
+      : [<span class="str">'error'</span>],
+  })
+
+<span class="kw">declare global</span> {
+  <span class="cm">// eslint-disable-next-line no-var</span>
+  <span class="kw">var</span> <span class="vr">prisma</span>: <span class="ty">ReturnType</span>&lt;<span class="kw">typeof</span> <span class="fn">createPrismaClient</span>&gt; | <span class="kw">undefined</span>
+}
+
+<span class="kw">export const</span> <span class="vr">db</span> =
+  globalThis.prisma ?? <span class="fn">createPrismaClient</span>()
+
+<span class="kw">if</span> (process.env.<span class="vr">NODE_ENV</span> !== <span class="str">'production'</span>) {
+  globalThis.prisma = db
+}</code></pre>
+</div>
+
+<!-- ── SECTION 3: Database Schema ── -->
+<div class="section" id="s3">
+  <h1>Database Schema</h1>
+
+  <h2>Prisma schema — <code>prisma/schema.prisma</code></h2>
+  <pre><code><span class="fn">generator</span> <span class="vr">client</span> {
+  provider = <span class="str">"prisma-client-js"</span>
+}
+
+<span class="fn">datasource</span> <span class="vr">db</span> {
+  provider = <span class="str">"postgresql"</span>
+  url      = <span class="fn">env</span>(<span class="str">"DATABASE_URL"</span>)
+}
+
+<span class="cm">/// Stores one APOD entry per day. The `date` field IS the primary key
+/// because NASA guarantees one photo per calendar date — no need for
+/// a surrogate serial ID here. JSONB raw_data lets us cache the full
+/// response so we can add new typed columns later without re-fetching.</span>
+<span class="fn">model</span> <span class="ty">ApodSnapshot</span> {
+  date        <span class="ty">String</span>   <span class="at">@id</span>                  <span class="cm">// "YYYY-MM-DD"</span>
+  title       <span class="ty">String</span>
+  explanation <span class="ty">String</span>
+  mediaType   <span class="ty">String</span>                         <span class="cm">// "image" | "video"</span>
+  url         <span class="ty">String</span>
+  hdurl       <span class="ty">String</span>?
+  copyright   <span class="ty">String</span>?
+  serviceVersion <span class="ty">String</span>
+  rawData     <span class="ty">Json</span>                            <span class="cm">// Full NASA response</span>
+  createdAt   <span class="ty">DateTime</span> <span class="at">@default</span>(<span class="fn">now</span>())
+  updatedAt   <span class="ty">DateTime</span> <span class="at">@updatedAt</span>
+
+  <span class="at">@@map</span>(<span class="str">"apod_snapshots"</span>)
+}
+
+<span class="cm">/// Near-Earth Object. NASA IDs are stable string identifiers —
+/// using them as PK avoids a useless surrogate and makes lookups
+/// by NASA ID O(1) with no extra index needed.</span>
+<span class="fn">model</span> <span class="ty">Asteroid</span> {
+  nasaId              <span class="ty">String</span>   <span class="at">@id</span>            <span class="cm">// e.g. "3542519"</span>
+  name                <span class="ty">String</span>
+  absoluteMagnitude   <span class="ty">Float</span>
+  estimatedDiameterMinKm <span class="ty">Float</span>
+  estimatedDiameterMaxKm <span class="ty">Float</span>
+  isPotentiallyHazardous <span class="ty">Boolean</span>
+  closeApproachDate   <span class="ty">String</span>                 <span class="cm">// "YYYY-MM-DD"</span>
+  relativeVelocityKmH <span class="ty">Float</span>
+  missDistanceKm      <span class="ty">Float</span>
+  orbitingBody        <span class="ty">String</span>
+  rawData             <span class="ty">Json</span>
+  fetchedAt           <span class="ty">DateTime</span> <span class="at">@default</span>(<span class="fn">now</span>())
+
+  <span class="at">@@index</span>([closeApproachDate])
+  <span class="at">@@index</span>([isPotentiallyHazardous])
+  <span class="at">@@map</span>(<span class="str">"asteroids"</span>)
+}
+
+<span class="cm">/// Audit log for cron runs. Essential for observability —
+/// you want to know when the last successful sync ran
+/// without tailing server logs.</span>
+<span class="fn">model</span> <span class="ty">SyncLog</span> {
+  id          <span class="ty">Int</span>      <span class="at">@id</span> <span class="at">@default</span>(<span class="fn">autoincrement</span>())
+  syncType    <span class="ty">String</span>                         <span class="cm">// "apod" | "asteroids"</span>
+  status      <span class="ty">String</span>                         <span class="cm">// "success" | "error"</span>
+  recordCount <span class="ty">Int</span>?
+  errorMessage <span class="ty">String</span>?
+  durationMs  <span class="ty">Int</span>?
+  ranAt       <span class="ty">DateTime</span> <span class="at">@default</span>(<span class="fn">now</span>())
+
+  <span class="at">@@index</span>([syncType, ranAt])
+  <span class="at">@@map</span>(<span class="str">"sync_log"</span>)
+}</code></pre>
+
+  <h2>Schema decisions explained</h2>
+  <table class="schema-table">
+    <thead><tr><th>Decision</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>rawData Json</td><td>Store the full NASA payload alongside typed columns. When NASA adds a new field, you have the data already — no back-fill needed.</td></tr>
+      <tr><td>@@index([closeApproachDate])</td><td>The most common query pattern is "asteroids approaching on date X". Without this index, every query is a full table scan.</td></tr>
+      <tr><td>date @id on ApodSnapshot</td><td>Natural key eliminates duplicate entries by design — upserting by date is idempotent.</td></tr>
+      <tr><td>SyncLog.durationMs</td><td>Lets you detect performance degradation in the cron job over time.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Run the migration</h2>
+  <pre><code><span class="cm"># Applies the schema to your local Postgres and generates the Prisma client</span>
+npx prisma migrate dev <span class="op">--</span>name init
+
+<span class="cm"># Open Prisma Studio to browse your DB visually</span>
+npx prisma studio</code></pre>
+</div>
+
+<!-- ── SECTION 4: NASA API Client ── -->
+<div class="section" id="s4">
+  <h1>NASA API Client</h1>
+
+  <h2>Zod schemas — <code>src/types/nasa.ts</code></h2>
+  <pre><code><span class="cm">/**
+ * Zod schemas serve double duty:
+ * 1. Runtime validation of NASA API responses (they can change without notice)
+ * 2. TypeScript type inference — no manual interface maintenance
+ *
+ * The pattern: define the Zod schema, then infer the TypeScript type from it.
+ * This is the single-source-of-truth approach to typing external data.
+ */</span>
+<span class="kw">import</span> { z } <span class="kw">from</span> <span class="str">'zod'</span>
+
+<span class="kw">export const</span> <span class="vr">ApodSchema</span> = z.object({
+  copyright:       z.string().optional(),
+  date:            z.string().regex(<span class="str">/^\d{4}-\d{2}-\d{2}$/</span>),
+  explanation:     z.string(),
+  hdurl:           z.string().url().optional(),
+  media_type:      z.enum([<span class="str">'image'</span>, <span class="str">'video'</span>]),
+  service_version: z.string(),
+  title:           z.string(),
+  url:             z.string().url(),
+})
+
+<span class="kw">export type</span> <span class="ty">Apod</span> = z.infer&lt;<span class="kw">typeof</span> <span class="vr">ApodSchema</span>&gt;
+
+<span class="cm">// NeoWs (Near Earth Object Web Service) response is deeply nested</span>
+<span class="kw">const</span> <span class="vr">CloseApproachSchema</span> = z.object({
+  close_approach_date:       z.string(),
+  relative_velocity:         z.object({
+    kilometers_per_hour:       z.string().transform(Number),
+  }),
+  miss_distance:             z.object({
+    kilometers:                z.string().transform(Number),
+  }),
+  orbiting_body:             z.string(),
+})
+
+<span class="kw">export const</span> <span class="vr">AsteroidSchema</span> = z.object({
+  id:                           z.string(),
+  name:                         z.string(),
+  absolute_magnitude_h:         z.number(),
+  estimated_diameter:           z.object({
+    kilometers:                 z.object({
+      estimated_diameter_min:   z.number(),
+      estimated_diameter_max:   z.number(),
+    }),
+  }),
+  is_potentially_hazardous_asteroid: z.boolean(),
+  close_approach_data:          z.array(<span class="vr">CloseApproachSchema</span>),
+})
+
+<span class="kw">export type</span> <span class="ty">Asteroid</span> = z.infer&lt;<span class="kw">typeof</span> <span class="vr">AsteroidSchema</span>&gt;
+
+<span class="kw">export const</span> <span class="vr">NeoFeedSchema</span> = z.object({
+  near_earth_objects: z.record(z.string(), z.array(<span class="vr">AsteroidSchema</span>)),
+  element_count:      z.number(),
+})</code></pre>
+
+  <div class="callout callout-mentor">
+    <p><strong>Mentor note on <code>.transform(Number)</code>:</strong> NASA's API returns numeric values like <code>miss_distance.kilometers</code> as <em>strings</em>. Zod's <code>.transform(Number)</code> handles the coercion at parse time and gives you a <code>number</code> in the inferred type. No manual parsing elsewhere in your app.</p>
+  </div>
+
+  <h2>NASA API client — <code>src/lib/nasa.ts</code></h2>
+  <pre><code><span class="kw">import</span> { cache } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { <span class="ty">ApodSchema</span>, <span class="ty">NeoFeedSchema</span>, <span class="kw">type</span> <span class="ty">Apod</span>, <span class="kw">type</span> <span class="ty">Asteroid</span> } <span class="kw">from</span> <span class="str">'@/types/nasa'</span>
+<span class="kw">import</span> { <span class="fn">format</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+
+<span class="kw">const</span> <span class="vr">BASE</span> = <span class="str">'https://api.nasa.gov'</span>
+<span class="kw">const</span> <span class="fn">key</span> = () => process.env.<span class="vr">NASA_API_KEY</span>
+
+<span class="cm">/**
+ * A typed fetch wrapper that:
+ * - Appends the API key automatically
+ * - Uses Next.js extended fetch caching (revalidate every hour)
+ * - Throws a meaningful error on non-2xx responses
+ * - Returns parsed + validated JSON via Zod
+ */</span>
+<span class="kw">async function</span> <span class="fn">nasaFetch</span>&lt;T&gt;(
+  path: <span class="ty">string</span>,
+  schema: { parse: (data: <span class="ty">unknown</span>) => T },
+  params: <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">string</span>&gt; = {},
+  options: <span class="ty">RequestInit</span> = {},
+): <span class="ty">Promise</span>&lt;T&gt; {
+  <span class="kw">const</span> url = <span class="kw">new</span> <span class="ty">URL</span>(`<span class="str">${BASE}${path}</span>`)
+  url.searchParams.set(<span class="str">'api_key'</span>, <span class="fn">key</span>() ?? <span class="str">'DEMO_KEY'</span>)
+  <span class="ty">Object</span>.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+
+  <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url.toString(), {
+    next: { revalidate: <span class="num">3600</span> },  <span class="cm">// Next.js cache: revalidate every 1h</span>
+    ...options,
+  })
+
+  <span class="kw">if</span> (!res.ok) {
+    <span class="kw">throw new</span> <span class="ty">Error</span>(
+      `<span class="str">NASA API error: ${res.status} ${res.statusText} on ${path}</span>`
+    )
+  }
+
+  <span class="kw">const</span> json = <span class="kw">await</span> res.json()
+  <span class="kw">return</span> schema.parse(json) <span class="cm">// Zod validates + transforms</span>
+}
+
+<span class="cm">/**
+ * React cache() deduplicates calls within a single render pass.
+ * If ApodCard and the page title both call fetchApod("2025-04-14"),
+ * the DB/API is only hit once. Zero extra config — just wrap with cache().
+ */</span>
+<span class="kw">export const</span> <span class="fn">fetchApod</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> (date: <span class="ty">string</span> = <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)): <span class="ty">Promise</span>&lt;<span class="ty">Apod</span>&gt; => {
+    <span class="kw">return</span> <span class="fn">nasaFetch</span>(<span class="str">'/planetary/apod'</span>, <span class="vr">ApodSchema</span>, { date })
+  }
+)
+
+<span class="kw">export const</span> <span class="fn">fetchAsteroids</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> (
+    startDate: <span class="ty">string</span>,
+    endDate: <span class="ty">string</span>
+  ): <span class="ty">Promise</span>&lt;<span class="ty">Asteroid</span>[]&gt; => {
+    <span class="kw">const</span> feed = <span class="kw">await</span> <span class="fn">nasaFetch</span>(
+      <span class="str">'/neo/rest/v1/feed'</span>,
+      <span class="vr">NeoFeedSchema</span>,
+      { start_date: startDate, end_date: endDate }
+    )
+    <span class="cm">// Flatten the date-keyed object into a flat array</span>
+    <span class="kw">return</span> <span class="ty">Object</span>.values(feed.near_earth_objects).flat()
+  }
+)</code></pre>
+</div>
+
+<!-- ── SECTION 5: API Route Handlers ── -->
+<div class="section" id="s5">
+  <h1>API Route Handlers</h1>
+
+  <h2>APOD route — <code>src/app/api/apod/route.ts</code></h2>
+  <pre><code><span class="kw">import</span> { <span class="ty">NextRequest</span>, <span class="ty">NextResponse</span> } <span class="kw">from</span> <span class="str">'next/server'</span>
+<span class="kw">import</span> { db } <span class="kw">from</span> <span class="str">'@/lib/db'</span>
+<span class="kw">import</span> { <span class="fn">fetchApod</span> } <span class="kw">from</span> <span class="str">'@/lib/nasa'</span>
+<span class="kw">import</span> { <span class="fn">format</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+
+<span class="cm">/**
+ * GET /api/apod?date=YYYY-MM-DD
+ *
+ * Cache-aside pattern:
+ * 1. Check DB first (fast, no API quota)
+ * 2. If missing, fetch from NASA, persist, then return
+ *
+ * This endpoint is used by the client for historical browsing.
+ * The SSR page uses the server-side fetchApod() directly.
+ */</span>
+<span class="kw">export async function</span> <span class="fn">GET</span>(req: <span class="ty">NextRequest</span>) {
+  <span class="kw">const</span> date =
+    req.nextUrl.searchParams.get(<span class="str">'date'</span>) ??
+    <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)
+
+  <span class="cm">// Validate date format before hitting DB or API</span>
+  <span class="kw">if</span> (!/<span class="str">^\d{4}-\d{2}-\d{2}$</span>/.test(date)) {
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(
+      { error: <span class="str">'Invalid date format. Use YYYY-MM-DD'</span> },
+      { status: <span class="num">400</span> }
+    )
+  }
+
+  <span class="kw">try</span> {
+    <span class="cm">// Layer 1: Check the DB cache</span>
+    <span class="kw">const</span> cached = <span class="kw">await</span> db.apodSnapshot.<span class="fn">findUnique</span>({
+      where: { date },
+    })
+
+    <span class="kw">if</span> (cached) {
+      <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(cached, {
+        headers: { <span class="str">'X-Cache'</span>: <span class="str">'HIT'</span> },
+      })
+    }
+
+    <span class="cm">// Layer 2: Fetch from NASA, persist to DB</span>
+    <span class="kw">const</span> apod = <span class="kw">await</span> <span class="fn">fetchApod</span>(date)
+
+    <span class="kw">const</span> snapshot = <span class="kw">await</span> db.apodSnapshot.<span class="fn">upsert</span>({
+      where:  { date },
+      create: {
+        date,
+        title:          apod.title,
+        explanation:    apod.explanation,
+        mediaType:      apod.media_type,
+        url:            apod.url,
+        hdurl:          apod.hdurl,
+        copyright:      apod.copyright,
+        serviceVersion: apod.service_version,
+        rawData:        apod <span class="kw">as</span> <span class="kw">unknown</span> <span class="kw">as</span> <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">unknown</span>&gt;,
+      },
+      update: {},  <span class="cm">// No-op on conflict — APOD for a date never changes</span>
+    })
+
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(snapshot, {
+      headers: { <span class="str">'X-Cache'</span>: <span class="str">'MISS'</span> },
+    })
+  } <span class="kw">catch</span> (err) {
+    console.error(<span class="str">'[APOD API]'</span>, err)
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(
+      { error: <span class="str">'Failed to fetch APOD data'</span> },
+      { status: <span class="num">502</span> }
+    )
+  }
+}</code></pre>
+
+  <div class="callout callout-info">
+    <p><strong>Why <code>upsert</code> with empty <code>update: {}</code>?</strong> This is an intentional no-op upsert. If the record already exists (race condition between two simultaneous requests), do nothing. If it doesn't exist, create it. The empty <code>update</code> block is not a mistake — it's the idiomatic Prisma pattern for "insert-if-not-exists".</p>
+  </div>
+
+  <h2>Asteroids route — <code>src/app/api/asteroids/route.ts</code></h2>
+  <pre><code><span class="kw">import</span> { <span class="ty">NextRequest</span>, <span class="ty">NextResponse</span> } <span class="kw">from</span> <span class="str">'next/server'</span>
+<span class="kw">import</span> { db } <span class="kw">from</span> <span class="str">'@/lib/db'</span>
+<span class="kw">import</span> { <span class="fn">fetchAsteroids</span> } <span class="kw">from</span> <span class="str">'@/lib/nasa'</span>
+<span class="kw">import</span> { <span class="fn">format</span>, <span class="fn">addDays</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+
+<span class="kw">export async function</span> <span class="fn">GET</span>(req: <span class="ty">NextRequest</span>) {
+  <span class="kw">const</span> today = <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)
+  <span class="kw">const</span> startDate = req.nextUrl.searchParams.get(<span class="str">'start'</span>) ?? today
+  <span class="kw">const</span> endDate   = req.nextUrl.searchParams.get(<span class="str">'end'</span>)
+    ?? <span class="fn">format</span>(<span class="fn">addDays</span>(<span class="kw">new</span> <span class="ty">Date</span>(startDate), <span class="num">7</span>), <span class="str">'yyyy-MM-dd'</span>)
+
+  <span class="kw">try</span> {
+    <span class="cm">// Check if we already have data for this date range in the DB</span>
+    <span class="kw">const</span> cached = <span class="kw">await</span> db.asteroid.<span class="fn">findMany</span>({
+      where: {
+        closeApproachDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      orderBy: { closeApproachDate: <span class="str">'asc'</span> },
+    })
+
+    <span class="kw">if</span> (cached.length > <span class="num">0</span>) {
+      <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(
+        { asteroids: cached, source: <span class="str">'db'</span> },
+        { headers: { <span class="str">'X-Cache'</span>: <span class="str">'HIT'</span> } }
+      )
+    }
+
+    <span class="cm">// NASA NeoWs: max 7-day window per request</span>
+    <span class="kw">const</span> asteroids = <span class="kw">await</span> <span class="fn">fetchAsteroids</span>(startDate, endDate)
+
+    <span class="cm">// Batch upsert all asteroids — more efficient than N individual writes</span>
+    <span class="kw">await</span> <span class="ty">Promise</span>.<span class="fn">all</span>(
+      asteroids.<span class="fn">map</span>((a) =>
+        db.asteroid.<span class="fn">upsert</span>({
+          where:  { nasaId: a.id },
+          create: {
+            nasaId:                    a.id,
+            name:                      a.name,
+            absoluteMagnitude:         a.absolute_magnitude_h,
+            estimatedDiameterMinKm:    a.estimated_diameter.kilometers.estimated_diameter_min,
+            estimatedDiameterMaxKm:    a.estimated_diameter.kilometers.estimated_diameter_max,
+            isPotentiallyHazardous:    a.is_potentially_hazardous_asteroid,
+            closeApproachDate:         a.close_approach_data[<span class="num">0</span>]?.close_approach_date ?? startDate,
+            relativeVelocityKmH:       a.close_approach_data[<span class="num">0</span>]?.relative_velocity.kilometers_per_hour ?? <span class="num">0</span>,
+            missDistanceKm:            a.close_approach_data[<span class="num">0</span>]?.miss_distance.kilometers ?? <span class="num">0</span>,
+            orbitingBody:              a.close_approach_data[<span class="num">0</span>]?.orbiting_body ?? <span class="str">'Earth'</span>,
+            rawData:                   a <span class="kw">as</span> <span class="kw">unknown</span> <span class="kw">as</span> <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">unknown</span>&gt;,
+          },
+          update: { fetchedAt: <span class="kw">new</span> <span class="ty">Date</span>() },
+        })
+      )
+    )
+
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(
+      { asteroids, source: <span class="str">'api'</span> },
+      { headers: { <span class="str">'X-Cache'</span>: <span class="str">'MISS'</span> } }
+    )
+  } <span class="kw">catch</span> (err) {
+    console.error(<span class="str">'[Asteroids API]'</span>, err)
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>(
+      { error: <span class="str">'Failed to fetch asteroid data'</span> },
+      { status: <span class="num">502</span> }
+    )
+  }
+}</code></pre>
+</div>
+
+<!-- ── SECTION 6: Cron Sync Job ── -->
+<div class="section" id="s6">
+  <h1>Cron Sync Job</h1>
+
+  <p>The cron job runs daily at midnight UTC, pre-fetching the new APOD and the next 7 days of asteroid data. This means the first user of the day gets instant responses from the DB, not a cold API call.</p>
+
+  <h2>Cron route — <code>src/app/api/cron/sync/route.ts</code></h2>
+  <pre><code><span class="kw">import</span> { <span class="ty">NextRequest</span>, <span class="ty">NextResponse</span> } <span class="kw">from</span> <span class="str">'next/server'</span>
+<span class="kw">import</span> { db } <span class="kw">from</span> <span class="str">'@/lib/db'</span>
+<span class="kw">import</span> { <span class="fn">fetchApod</span>, <span class="fn">fetchAsteroids</span> } <span class="kw">from</span> <span class="str">'@/lib/nasa'</span>
+<span class="kw">import</span> { <span class="fn">format</span>, <span class="fn">addDays</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+
+<span class="cm">/**
+ * POST /api/cron/sync
+ *
+ * Security: Protected by a bearer token (CRON_SECRET env var).
+ * On Vercel, set up cron via vercel.json and the token automatically.
+ * Locally: curl -X POST localhost:3000/api/cron/sync \
+ *   -H "Authorization: Bearer your-cron-secret"
+ *
+ * Vercel Cron calls this with the CRON_SECRET as a header — we validate
+ * it before doing any work. This prevents arbitrary internet traffic
+ * from exhausting your NASA API quota.
+ */</span>
+<span class="kw">export async function</span> <span class="fn">POST</span>(req: <span class="ty">NextRequest</span>) {
+  <span class="kw">const</span> authHeader = req.headers.<span class="fn">get</span>(<span class="str">'authorization'</span>)
+  <span class="kw">if</span> (authHeader !== `Bearer ${process.env.<span class="vr">CRON_SECRET</span>}`) {
+    <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>({ error: <span class="str">'Unauthorized'</span> }, { status: <span class="num">401</span> })
+  }
+
+  <span class="kw">const</span> today     = <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)
+  <span class="kw">const</span> sevenDays = <span class="fn">format</span>(<span class="fn">addDays</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="num">7</span>), <span class="str">'yyyy-MM-dd'</span>)
+  <span class="kw">const</span> start = <span class="ty">Date</span>.<span class="fn">now</span>()
+  <span class="kw">const</span> results: <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="kw">unknown</span>&gt; = {}
+
+  <span class="cm">// ── Sync APOD ────────────────────────────────</span>
+  <span class="kw">try</span> {
+    <span class="kw">const</span> apod = <span class="kw">await</span> <span class="fn">fetchApod</span>(today)
+    <span class="kw">await</span> db.apodSnapshot.<span class="fn">upsert</span>({
+      where:  { date: today },
+      create: {
+        date:           today,
+        title:          apod.title,
+        explanation:    apod.explanation,
+        mediaType:      apod.media_type,
+        url:            apod.url,
+        hdurl:          apod.hdurl,
+        copyright:      apod.copyright,
+        serviceVersion: apod.service_version,
+        rawData:        apod <span class="kw">as</span> <span class="kw">unknown</span> <span class="kw">as</span> <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">unknown</span>&gt;,
+      },
+      update: {},
+    })
+    <span class="kw">await</span> db.syncLog.<span class="fn">create</span>({
+      data: { syncType: <span class="str">'apod'</span>, status: <span class="str">'success'</span>, recordCount: <span class="num">1</span>,
+              durationMs: <span class="ty">Date</span>.<span class="fn">now</span>() - start },
+    })
+    results.apod = { status: <span class="str">'ok'</span>, title: apod.title }
+  } <span class="kw">catch</span> (err) {
+    <span class="kw">await</span> db.syncLog.<span class="fn">create</span>({
+      data: { syncType: <span class="str">'apod'</span>, status: <span class="str">'error'</span>,
+              errorMessage: String(err), durationMs: <span class="ty">Date</span>.<span class="fn">now</span>() - start },
+    })
+    results.apod = { status: <span class="str">'error'</span>, error: String(err) }
+  }
+
+  <span class="cm">// ── Sync asteroids ────────────────────────────</span>
+  <span class="kw">const</span> astStart = <span class="ty">Date</span>.<span class="fn">now</span>()
+  <span class="kw">try</span> {
+    <span class="kw">const</span> asteroids = <span class="kw">await</span> <span class="fn">fetchAsteroids</span>(today, sevenDays)
+    <span class="kw">await</span> <span class="ty">Promise</span>.<span class="fn">all</span>(
+      asteroids.<span class="fn">map</span>((a) =>
+        db.asteroid.<span class="fn">upsert</span>({
+          where:  { nasaId: a.id },
+          create: {
+            nasaId:                 a.id,
+            name:                   a.name,
+            absoluteMagnitude:      a.absolute_magnitude_h,
+            estimatedDiameterMinKm: a.estimated_diameter.kilometers.estimated_diameter_min,
+            estimatedDiameterMaxKm: a.estimated_diameter.kilometers.estimated_diameter_max,
+            isPotentiallyHazardous: a.is_potentially_hazardous_asteroid,
+            closeApproachDate:      a.close_approach_data[<span class="num">0</span>]?.close_approach_date ?? today,
+            relativeVelocityKmH:    a.close_approach_data[<span class="num">0</span>]?.relative_velocity.kilometers_per_hour ?? <span class="num">0</span>,
+            missDistanceKm:         a.close_approach_data[<span class="num">0</span>]?.miss_distance.kilometers ?? <span class="num">0</span>,
+            orbitingBody:           a.close_approach_data[<span class="num">0</span>]?.orbiting_body ?? <span class="str">'Earth'</span>,
+            rawData:                a <span class="kw">as</span> <span class="kw">unknown</span> <span class="kw">as</span> <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">unknown</span>&gt;,
+          },
+          update: { fetchedAt: <span class="kw">new</span> <span class="ty">Date</span>() },
+        })
+      )
+    )
+    <span class="kw">await</span> db.syncLog.<span class="fn">create</span>({
+      data: { syncType: <span class="str">'asteroids'</span>, status: <span class="str">'success'</span>,
+              recordCount: asteroids.length, durationMs: <span class="ty">Date</span>.<span class="fn">now</span>() - astStart },
+    })
+    results.asteroids = { status: <span class="str">'ok'</span>, count: asteroids.length }
+  } <span class="kw">catch</span> (err) {
+    <span class="kw">await</span> db.syncLog.<span class="fn">create</span>({
+      data: { syncType: <span class="str">'asteroids'</span>, status: <span class="str">'error'</span>,
+              errorMessage: String(err), durationMs: <span class="ty">Date</span>.<span class="fn">now</span>() - astStart },
+    })
+    results.asteroids = { status: <span class="str">'error'</span>, error: String(err) }
+  }
+
+  <span class="kw">return</span> <span class="ty">NextResponse</span>.<span class="fn">json</span>({ synced: results, totalMs: <span class="ty">Date</span>.<span class="fn">now</span>() - start })
+}</code></pre>
+
+  <h2>Vercel cron config — <code>vercel.json</code></h2>
+  <pre><code>{
+  <span class="prop">"crons"</span>: [
+    {
+      <span class="prop">"path"</span>: <span class="str">"/api/cron/sync"</span>,
+      <span class="prop">"schedule"</span>: <span class="str">"0 1 * * *"</span>  <span class="cm">// 1:00 AM UTC daily (APOD resets at midnight UTC)</span>
+    }
+  ]
+}</code></pre>
+
+  <div class="callout callout-warn">
+    <p><strong>Cron timing tip:</strong> NASA publishes the new APOD at midnight UTC. We schedule our sync at 01:00 UTC to give them a 1-hour buffer — this avoids the race condition where our cron runs before the new photo is live and caches a stale response.</p>
+  </div>
+</div>
+
+<!-- ── SECTION 7: TypeScript Types ── -->
+<div class="section" id="s7">
+  <h1>TypeScript Types</h1>
+  <p>Good type architecture means you define types once and let the compiler propagate them everywhere. Here's the full type strategy for this project:</p>
+
+  <h2>DB query types — <code>src/lib/queries.ts</code></h2>
+  <pre><code><span class="kw">import</span> { cache } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { db } <span class="kw">from</span> <span class="str">'./db'</span>
+<span class="kw">import</span> { <span class="kw">type</span> <span class="ty">Prisma</span> } <span class="kw">from</span> <span class="str">'@prisma/client'</span>
+
+<span class="cm">/**
+ * Prisma's generated types are deeply nested generics.
+ * We use `Prisma.ApodSnapshotGetPayload` to derive the exact
+ * TypeScript type that Prisma will return for a given query.
+ * This is more precise than importing the raw model type —
+ * it accounts for select/include/omit modifiers.
+ */</span>
+<span class="kw">export type</span> <span class="ty">ApodSnapshotRow</span> = <span class="ty">Prisma</span>.<span class="fn">ApodSnapshotGetPayload</span>&lt;{}>
+
+<span class="kw">export type</span> <span class="ty">AsteroidRow</span> = <span class="ty">Prisma</span>.<span class="fn">AsteroidGetPayload</span>&lt;{}>
+
+<span class="cm">// Typed query functions with React cache() deduplication</span>
+<span class="kw">export const</span> <span class="fn">getApodByDate</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> (date: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">ApodSnapshotRow</span> | <span class="kw">null</span>&gt; => {
+    <span class="kw">return</span> db.apodSnapshot.<span class="fn">findUnique</span>({ where: { date } })
+  }
+)
+
+<span class="kw">export const</span> <span class="fn">getAsteroidsByDateRange</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> (startDate: <span class="ty">string</span>, endDate: <span class="ty">string</span>): <span class="ty">Promise</span>&lt;<span class="ty">AsteroidRow</span>[]&gt; => {
+    <span class="kw">return</span> db.asteroid.<span class="fn">findMany</span>({
+      where: {
+        closeApproachDate: { gte: startDate, lte: endDate },
+      },
+      orderBy: [
+        { isPotentiallyHazardous: <span class="str">'desc'</span> }, <span class="cm">// Hazardous first</span>
+        { closeApproachDate: <span class="str">'asc'</span> },
+      ],
+    })
+  }
+)
+
+<span class="kw">export const</span> <span class="fn">getRecentApodHistory</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> (limit = <span class="num">30</span>): <span class="ty">Promise</span>&lt;<span class="ty">Pick</span>&lt;<span class="ty">ApodSnapshotRow</span>, <span class="str">'date'</span> | <span class="str">'title'</span> | <span class="str">'url'</span>&gt;[]&gt; => {
+    <span class="kw">return</span> db.apodSnapshot.<span class="fn">findMany</span>({
+      orderBy: { date: <span class="str">'desc'</span> },
+      take: limit,
+      select: { date: <span class="kw">true</span>, title: <span class="kw">true</span>, url: <span class="kw">true</span> },
+    })
+  }
+)
+
+<span class="kw">export const</span> <span class="fn">getLastSyncStatus</span> = <span class="fn">cache</span>(
+  <span class="kw">async</span> () => {
+    <span class="kw">const</span> [apodLog, asteroidLog] = <span class="kw">await</span> <span class="ty">Promise</span>.<span class="fn">all</span>([
+      db.syncLog.<span class="fn">findFirst</span>({ where: { syncType: <span class="str">'apod'</span> }, orderBy: { ranAt: <span class="str">'desc'</span> } }),
+      db.syncLog.<span class="fn">findFirst</span>({ where: { syncType: <span class="str">'asteroids'</span> }, orderBy: { ranAt: <span class="str">'desc'</span> } }),
+    ])
+    <span class="kw">return</span> { apodLog, asteroidLog }
+  }
+)</code></pre>
+
+  <div class="callout callout-mentor">
+    <p><strong>Mentor note on <code>Pick&lt;&gt;</code>:</strong> The <code>getRecentApodHistory</code> query uses a <code>select</code> in Prisma. Instead of returning <code>ApodSnapshotRow[]</code> (which would be wrong — those rows don't have all fields), we return <code>Pick&lt;ApodSnapshotRow, 'date' | 'title' | 'url'&gt;[]</code>. This is honest typing — it exactly matches what Prisma returns. Never lie to TypeScript with <code>as</code> when you can express the actual shape.</p>
+  </div>
+</div>
+
+<!-- ── SECTION 8: Server Components ── -->
+<div class="section" id="s8">
+  <h1>Server Components</h1>
+
+  <h2>APOD card — <code>src/components/ApodCard.tsx</code></h2>
+  <pre><code><span class="cm">/**
+ * Server Component — runs entirely on the server.
+ * NO "use client" directive = Server Component by default in App Router.
+ *
+ * Benefits here:
+ * - DB query runs server-side (no API round-trip from browser)
+ * - Image URL is resolved before sending HTML — no layout shift
+ * - Zero JS sent to the browser for this component
+ * - Secrets (NASA_API_KEY) stay on server
+ */</span>
+<span class="kw">import</span> Image <span class="kw">from</span> <span class="str">'next/image'</span>
+<span class="kw">import</span> { <span class="fn">getApodByDate</span>, <span class="fn">fetchApod</span> } <span class="kw">from</span> <span class="str">'@/lib/queries'</span>
+<span class="kw">import</span> { db } <span class="kw">from</span> <span class="str">'@/lib/db'</span>
+<span class="kw">import</span> { <span class="fn">format</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+
+<span class="kw">interface</span> <span class="ty">Props</span> {
+  date?: <span class="ty">string</span>
+}
+
+<span class="kw">export default async function</span> <span class="fn">ApodCard</span>({ date }: <span class="ty">Props</span>) {
+  <span class="kw">const</span> today = date ?? <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)
+
+  <span class="cm">// Try DB first</span>
+  <span class="kw">let</span> apod = <span class="kw">await</span> <span class="fn">getApodByDate</span>(today)
+
+  <span class="kw">if</span> (!apod) {
+    <span class="cm">// Cold start — fetch and persist</span>
+    <span class="kw">const</span> fetched = <span class="kw">await</span> <span class="fn">fetchApod</span>(today)
+    apod = <span class="kw">await</span> db.apodSnapshot.<span class="fn">upsert</span>({
+      where:  { date: today },
+      create: {
+        date:           today,
+        title:          fetched.title,
+        explanation:    fetched.explanation,
+        mediaType:      fetched.media_type,
+        url:            fetched.url,
+        hdurl:          fetched.hdurl,
+        copyright:      fetched.copyright,
+        serviceVersion: fetched.service_version,
+        rawData:        fetched <span class="kw">as</span> <span class="kw">unknown</span> <span class="kw">as</span> <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">unknown</span>&gt;,
+      },
+      update: {},
+    })
+  }
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">article</span> className=<span class="str">"rounded-xl overflow-hidden border border-white/10 bg-white/5"</span>&gt;
+      &lt;<span class="fn">div</span> className=<span class="str">"relative aspect-video"</span>&gt;
+        {apod.mediaType === <span class="str">'image'</span> ? (
+          &lt;<span class="fn">Image</span>
+            src={apod.hdurl ?? apod.url}
+            alt={apod.title}
+            fill
+            className=<span class="str">"object-cover"</span>
+            priority       <span class="cm">// Above-the-fold hero image: eager load</span>
+            sizes=<span class="str">"(max-width: 768px) 100vw, 50vw"</span>
+          /&gt;
+        ) : (
+          &lt;<span class="fn">iframe</span>
+            src={apod.url}
+            className=<span class="str">"w-full h-full"</span>
+            allowFullScreen
+            title={apod.title}
+          /&gt;
+        )}
+      &lt;/<span class="fn">div</span>&gt;
+
+      &lt;<span class="fn">div</span> className=<span class="str">"p-5 space-y-3"</span>&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"flex items-start justify-between gap-4"</span>&gt;
+          &lt;<span class="fn">h2</span> className=<span class="str">"text-lg font-semibold text-white"</span>&gt;{apod.title}&lt;/<span class="fn">h2</span>&gt;
+          &lt;<span class="fn">time</span>
+            dateTime={apod.date}
+            className=<span class="str">"text-sm text-white/50 shrink-0"</span>
+          &gt;
+            {apod.date}
+          &lt;/<span class="fn">time</span>&gt;
+        &lt;/<span class="fn">div</span>&gt;
+
+        &lt;<span class="fn">p</span> className=<span class="str">"text-sm text-white/70 line-clamp-4 leading-relaxed"</span>&gt;
+          {apod.explanation}
+        &lt;/<span class="fn">p</span>&gt;
+
+        {apod.copyright &amp;&amp; (
+          &lt;<span class="fn">p</span> className=<span class="str">"text-xs text-white/40"</span>&gt;
+            © {apod.copyright}
+          &lt;/<span class="fn">p</span>&gt;
+        )}
+      &lt;/<span class="fn">div</span>&gt;
+    &lt;/<span class="fn">article</span>&gt;
+  )
+}</code></pre>
+</div>
+
+<!-- ── SECTION 9: Client Components ── -->
+<div class="section" id="s9">
+  <h1>Client Components</h1>
+
+  <h2>Asteroid table — <code>src/components/AsteroidTable.tsx</code></h2>
+  <pre><code><span class="str">'use client'</span>
+<span class="cm">/**
+ * Client Component — "use client" is the boundary directive.
+ *
+ * Why client here? Because the user needs to:
+ * - Filter by hazardous/all
+ * - Sort columns by clicking headers
+ * - Paginate the table
+ *
+ * All of these require local state (useState) and event handlers.
+ * The INITIAL data is passed down from the parent Server Component as
+ * props — no client-side fetch on mount. React Query handles
+ * subsequent fetches (e.g. when user changes the date range).
+ */</span>
+<span class="kw">import</span> { useState, useMemo } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { <span class="kw">type</span> <span class="ty">AsteroidRow</span> } <span class="kw">from</span> <span class="str">'@/lib/queries'</span>
+
+<span class="kw">type</span> <span class="ty">SortKey</span> = keyof <span class="ty">Pick</span>&lt;
+  <span class="ty">AsteroidRow</span>,
+  <span class="str">'closeApproachDate'</span> | <span class="str">'missDistanceKm'</span> | <span class="str">'relativeVelocityKmH'</span> | <span class="str">'estimatedDiameterMaxKm'</span>
+&gt;
+
+<span class="kw">interface</span> <span class="ty">Props</span> {
+  initialAsteroids: <span class="ty">AsteroidRow</span>[]
+}
+
+<span class="kw">export default function</span> <span class="fn">AsteroidTable</span>({ initialAsteroids }: <span class="ty">Props</span>) {
+  <span class="kw">const</span> [showHazardousOnly, setShowHazardousOnly] = <span class="fn">useState</span>(<span class="kw">false</span>)
+  <span class="kw">const</span> [sortKey, setSortKey] = <span class="fn">useState</span>&lt;<span class="ty">SortKey</span>&gt;(<span class="str">'closeApproachDate'</span>)
+  <span class="kw">const</span> [sortAsc, setSortAsc] = <span class="fn">useState</span>(<span class="kw">true</span>)
+  <span class="kw">const</span> [page, setPage] = <span class="fn">useState</span>(<span class="num">1</span>)
+  <span class="kw">const</span> <span class="vr">PAGE_SIZE</span> = <span class="num">10</span>
+
+  <span class="kw">const</span> filtered = <span class="fn">useMemo</span>(() => {
+    <span class="kw">const</span> data = showHazardousOnly
+      ? initialAsteroids.<span class="fn">filter</span>((a) => a.isPotentiallyHazardous)
+      : initialAsteroids
+
+    <span class="kw">return</span> [...data].<span class="fn">sort</span>((a, b) => {
+      <span class="kw">const</span> aVal = a[sortKey]
+      <span class="kw">const</span> bVal = b[sortKey]
+      <span class="kw">const</span> cmp = <span class="kw">typeof</span> aVal === <span class="str">'string'</span>
+        ? aVal.localeCompare(bVal <span class="kw">as</span> <span class="ty">string</span>)
+        : (aVal <span class="kw">as</span> <span class="ty">number</span>) - (bVal <span class="kw">as</span> <span class="ty">number</span>)
+      <span class="kw">return</span> sortAsc ? cmp : -cmp
+    })
+  }, [initialAsteroids, showHazardousOnly, sortKey, sortAsc])
+
+  <span class="kw">const</span> totalPages = <span class="ty">Math</span>.<span class="fn">ceil</span>(filtered.length / <span class="vr">PAGE_SIZE</span>)
+  <span class="kw">const</span> paginated = filtered.<span class="fn">slice</span>((page - <span class="num">1</span>) * <span class="vr">PAGE_SIZE</span>, page * <span class="vr">PAGE_SIZE</span>)
+
+  <span class="kw">function</span> <span class="fn">toggleSort</span>(key: <span class="ty">SortKey</span>) {
+    <span class="kw">if</span> (sortKey === key) {
+      setSortAsc((prev) => !prev)
+    } <span class="kw">else</span> {
+      setSortKey(key)
+      setSortAsc(<span class="kw">true</span>)
+    }
+    setPage(<span class="num">1</span>)
+  }
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">div</span> className=<span class="str">"space-y-4"</span>&gt;
+      &lt;<span class="fn">div</span> className=<span class="str">"flex items-center gap-4"</span>&gt;
+        &lt;<span class="fn">label</span> className=<span class="str">"flex items-center gap-2 text-sm text-white/70 cursor-pointer"</span>&gt;
+          &lt;<span class="fn">input</span>
+            type=<span class="str">"checkbox"</span>
+            checked={showHazardousOnly}
+            onChange={(e) => { setShowHazardousOnly(e.target.checked); setPage(<span class="num">1</span>) }}
+            className=<span class="str">"accent-red-500"</span>
+          /&gt;
+          Show potentially hazardous only
+        &lt;/<span class="fn">label</span>&gt;
+        &lt;<span class="fn">span</span> className=<span class="str">"text-sm text-white/40"</span>&gt;
+          {filtered.length} asteroids
+        &lt;/<span class="fn">span</span>&gt;
+      &lt;/<span class="fn">div</span>&gt;
+
+      &lt;<span class="fn">div</span> className=<span class="str">"overflow-x-auto rounded-lg border border-white/10"</span>&gt;
+        &lt;<span class="fn">table</span> className=<span class="str">"w-full text-sm"</span>&gt;
+          &lt;<span class="fn">thead</span>&gt;
+            &lt;<span class="fn">tr</span> className=<span class="str">"border-b border-white/10 bg-white/5"</span>&gt;
+              &lt;<span class="fn">th</span> className=<span class="str">"text-left p-3 text-white/60 font-medium"</span>&gt;Name&lt;/<span class="fn">th</span>&gt;
+              &lt;<span class="fn">th</span> className=<span class="str">"text-left p-3 text-white/60 font-medium"</span>&gt;Hazardous&lt;/<span class="fn">th</span>&gt;
+              {([
+                [<span class="str">'closeApproachDate'</span>, <span class="str">'Date'</span>],
+                [<span class="str">'missDistanceKm'</span>, <span class="str">'Miss dist. (km)'</span>],
+                [<span class="str">'relativeVelocityKmH'</span>, <span class="str">'Velocity (km/h)'</span>],
+                [<span class="str">'estimatedDiameterMaxKm'</span>, <span class="str">'Max Ø (km)'</span>],
+              ] <span class="kw">as const</span>).<span class="fn">map</span>(([key, label]) => (
+                &lt;<span class="fn">th</span>
+                  key={key}
+                  className=<span class="str">"text-left p-3 text-white/60 font-medium cursor-pointer hover:text-white select-none"</span>
+                  onClick={() => <span class="fn">toggleSort</span>(key)}
+                &gt;
+                  {label} {sortKey === key ? (sortAsc ? <span class="str">'↑'</span> : <span class="str">'↓'</span>) : <span class="str">'↕'</span>}
+                &lt;/<span class="fn">th</span>&gt;
+              ))}
+            &lt;/<span class="fn">tr</span>&gt;
+          &lt;/<span class="fn">thead</span>&gt;
+          &lt;<span class="fn">tbody</span>&gt;
+            {paginated.<span class="fn">map</span>((a) => (
+              &lt;<span class="fn">tr</span>
+                key={a.nasaId}
+                className=<span class="str">"border-b border-white/5 hover:bg-white/5 transition-colors"</span>
+              &gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3 text-white font-medium"</span>&gt;{a.name}&lt;/<span class="fn">td</span>&gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3"</span>&gt;
+                  {a.isPotentiallyHazardous ? (
+                    &lt;<span class="fn">span</span> className=<span class="str">"text-red-400 font-semibold"</span>&gt;⚠ YES&lt;/<span class="fn">span</span>&gt;
+                  ) : (
+                    &lt;<span class="fn">span</span> className=<span class="str">"text-green-500"</span>&gt;✓ No&lt;/<span class="fn">span</span>&gt;
+                  )}
+                &lt;/<span class="fn">td</span>&gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3 text-white/70"</span>&gt;{a.closeApproachDate}&lt;/<span class="fn">td</span>&gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3 text-white/70"</span>&gt;
+                  {a.missDistanceKm.toLocaleString(<span class="str">'en-US'</span>, { maximumFractionDigits: <span class="num">0</span> })}
+                &lt;/<span class="fn">td</span>&gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3 text-white/70"</span>&gt;
+                  {a.relativeVelocityKmH.toLocaleString(<span class="str">'en-US'</span>, { maximumFractionDigits: <span class="num">0</span> })}
+                &lt;/<span class="fn">td</span>&gt;
+                &lt;<span class="fn">td</span> className=<span class="str">"p-3 text-white/70"</span>&gt;
+                  {a.estimatedDiameterMaxKm.toFixed(<span class="num">3</span>)}
+                &lt;/<span class="fn">td</span>&gt;
+              &lt;/<span class="fn">tr</span>&gt;
+            ))}
+          &lt;/<span class="fn">tbody</span>&gt;
+        &lt;/<span class="fn">table</span>&gt;
+      &lt;/<span class="fn">div</span>&gt;
+
+      &lt;<span class="fn">div</span> className=<span class="str">"flex items-center justify-between text-sm text-white/50"</span>&gt;
+        &lt;<span class="fn">span</span>&gt;Page {page} of {totalPages}&lt;/<span class="fn">span</span>&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"flex gap-2"</span>&gt;
+          &lt;<span class="fn">button</span>
+            onClick={() => setPage((p) => <span class="ty">Math</span>.<span class="fn">max</span>(<span class="num">1</span>, p - <span class="num">1</span>))}
+            disabled={page === <span class="num">1</span>}
+            className=<span class="str">"px-3 py-1 rounded border border-white/20 disabled:opacity-30 hover:bg-white/10"</span>
+          &gt;← Prev&lt;/<span class="fn">button</span>&gt;
+          &lt;<span class="fn">button</span>
+            onClick={() => setPage((p) => <span class="ty">Math</span>.<span class="fn">min</span>(totalPages, p + <span class="num">1</span>))}
+            disabled={page === totalPages}
+            className=<span class="str">"px-3 py-1 rounded border border-white/20 disabled:opacity-30 hover:bg-white/10"</span>
+          &gt;Next →&lt;/<span class="fn">button</span>&gt;
+        &lt;/<span class="fn">div</span>&gt;
+      &lt;/<span class="fn">div</span>&gt;
+    &lt;/<span class="fn">div</span>&gt;
+  )
+}</code></pre>
+</div>
+
+<!-- ── SECTION 10: Dashboard Page ── -->
+<div class="section" id="s10">
+  <h1>Dashboard Page</h1>
+
+  <h2>Main page — <code>src/app/page.tsx</code></h2>
+  <pre><code><span class="cm">/**
+ * Root page — Server Component.
+ *
+ * Architecture pattern: "Fetch at the top, pass down as props."
+ *
+ * All data fetching happens here (or in child Server Components).
+ * Client Components receive fully-fetched data as props.
+ * This eliminates waterfall fetches and keeps client bundles small.
+ *
+ * Notice: we use Promise.all for concurrent DB queries.
+ * Sequential await is a common performance trap —
+ * if getApodByDate takes 20ms and getAsteroidsByDateRange takes 30ms,
+ * sequential = 50ms total. Concurrent = 30ms total.
+ */</span>
+<span class="kw">import</span> { <span class="fn">Suspense</span> } <span class="kw">from</span> <span class="str">'react'</span>
+<span class="kw">import</span> { <span class="fn">format</span>, <span class="fn">addDays</span> } <span class="kw">from</span> <span class="str">'date-fns'</span>
+<span class="kw">import</span> <span class="fn">ApodCard</span> <span class="kw">from</span> <span class="str">'@/components/ApodCard'</span>
+<span class="kw">import</span> <span class="fn">AsteroidTable</span> <span class="kw">from</span> <span class="str">'@/components/AsteroidTable'</span>
+<span class="kw">import</span> { <span class="fn">getAsteroidsByDateRange</span>, <span class="fn">getLastSyncStatus</span> } <span class="kw">from</span> <span class="str">'@/lib/queries'</span>
+
+<span class="kw">export const</span> <span class="vr">dynamic</span> = <span class="str">'force-dynamic'</span>  <span class="cm">// Always render fresh (no static page cache)</span>
+
+<span class="kw">export default async function</span> <span class="fn">DashboardPage</span>() {
+  <span class="kw">const</span> today     = <span class="fn">format</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="str">'yyyy-MM-dd'</span>)
+  <span class="kw">const</span> nextWeek  = <span class="fn">format</span>(<span class="fn">addDays</span>(<span class="kw">new</span> <span class="ty">Date</span>(), <span class="num">7</span>), <span class="str">'yyyy-MM-dd'</span>)
+
+  <span class="cm">// Concurrent fetches — no sequential waterfall</span>
+  <span class="kw">const</span> [asteroids, syncStatus] = <span class="kw">await</span> <span class="ty">Promise</span>.<span class="fn">all</span>([
+    <span class="fn">getAsteroidsByDateRange</span>(today, nextWeek),
+    <span class="fn">getLastSyncStatus</span>(),
+  ])
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">div</span> className=<span class="str">"min-h-screen bg-[#0a0e1a] text-white"</span>&gt;
+      &lt;<span class="fn">header</span> className=<span class="str">"border-b border-white/10 px-6 py-4 flex items-center justify-between"</span>&gt;
+        &lt;<span class="fn">h1</span> className=<span class="str">"text-xl font-bold tracking-tight"</span>&gt;
+          🌌 Space Dashboard
+        &lt;/<span class="fn">h1</span>&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"text-xs text-white/40"</span>&gt;
+          Last sync: {syncStatus.apodLog?.ranAt.toISOString().slice(<span class="num">0</span>, <span class="num">16</span>)} UTC
+        &lt;/<span class="fn">div</span>&gt;
+      &lt;/<span class="fn">header</span>&gt;
+
+      &lt;<span class="fn">main</span> className=<span class="str">"max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8"</span>&gt;
+        &lt;<span class="fn">section</span>&gt;
+          &lt;<span class="fn">h2</span> className=<span class="str">"text-sm font-medium text-white/50 uppercase tracking-widest mb-4"</span>&gt;
+            Astronomy Photo of the Day
+          &lt;/<span class="fn">h2</span>&gt;
+          &lt;<span class="cm">{/*
+            Suspense lets this section stream in independently.
+            If ApodCard is slow (cold NASA API hit), the asteroid table
+            renders immediately with its data. The browser shows a
+            skeleton for the APOD section while it loads.
+          */}</span>&gt;
+          &lt;<span class="fn">Suspense</span> fallback={&lt;<span class="fn">ApodSkeleton</span> /&gt;}&gt;
+            &lt;<span class="fn">ApodCard</span> date={today} /&gt;
+          &lt;/<span class="fn">Suspense</span>&gt;
+        &lt;/<span class="fn">section</span>&gt;
+
+        &lt;<span class="fn">section</span>&gt;
+          &lt;<span class="fn">h2</span> className=<span class="str">"text-sm font-medium text-white/50 uppercase tracking-widest mb-4"</span>&gt;
+            Near-Earth Objects — Next 7 Days
+          &lt;/<span class="fn">h2</span>&gt;
+          &lt;<span class="fn">AsteroidTable</span> initialAsteroids={asteroids} /&gt;
+        &lt;/<span class="fn">section</span>&gt;
+      &lt;/<span class="fn">main</span>&gt;
+    &lt;/<span class="fn">div</span>&gt;
+  )
+}
+
+<span class="kw">function</span> <span class="fn">ApodSkeleton</span>() {
+  <span class="kw">return</span> (
+    &lt;<span class="fn">div</span> className=<span class="str">"rounded-xl overflow-hidden border border-white/10 animate-pulse"</span>&gt;
+      &lt;<span class="fn">div</span> className=<span class="str">"aspect-video bg-white/10"</span> /&gt;
+      &lt;<span class="fn">div</span> className=<span class="str">"p-5 space-y-3"</span>&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"h-5 bg-white/10 rounded w-3/4"</span> /&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"h-4 bg-white/10 rounded w-full"</span> /&gt;
+        &lt;<span class="fn">div</span> className=<span class="str">"h-4 bg-white/10 rounded w-5/6"</span> /&gt;
+      &lt;/<span class="fn">div</span>&gt;
+    &lt;/<span class="fn">div</span>&gt;
+  )
+}</code></pre>
+
+  <div class="callout callout-mentor">
+    <p><strong>Mentor note on <code>Suspense</code> streaming:</strong> Without Suspense, a slow APOD cold-start would block the <em>entire page</em> from rendering. With Suspense, the asteroid table streams to the user immediately with a skeleton placeholder for the APOD section. This is React 18's concurrent rendering at work — two sections of the page that have independent data dependencies render independently.</p>
+  </div>
+</div>
+
+<!-- ── SECTION 11: Error Handling ── -->
+<div class="section" id="s11">
+  <h1>Error Handling</h1>
+
+  <h2>Next.js error boundary — <code>src/app/error.tsx</code></h2>
+  <pre><code><span class="str">'use client'</span>
+<span class="cm">// error.tsx must be a Client Component — it receives the Error object</span>
+<span class="kw">import</span> { useEffect } <span class="kw">from</span> <span class="str">'react'</span>
+
+<span class="kw">export default function</span> <span class="fn">Error</span>({
+  error,
+  reset,
+}: {
+  error: <span class="ty">Error</span> &amp; { digest?: <span class="ty">string</span> }
+  reset: () => <span class="ty">void</span>
+}) {
+  <span class="fn">useEffect</span>(() => {
+    <span class="cm">// Log to your error tracking service (Sentry, Datadog, etc.)</span>
+    console.error(error)
+  }, [error])
+
+  <span class="kw">return</span> (
+    &lt;<span class="fn">div</span> className=<span class="str">"flex flex-col items-center justify-center min-h-[400px] gap-4"</span>&gt;
+      &lt;<span class="fn">h2</span> className=<span class="str">"text-lg font-semibold text-white"</span>&gt;Something went wrong&lt;/<span class="fn">h2</span>&gt;
+      &lt;<span class="fn">p</span> className=<span class="str">"text-sm text-white/60 text-center max-w-sm"</span>&gt;
+        Failed to load space data. The NASA API may be temporarily unavailable.
+      &lt;/<span class="fn">p</span>&gt;
+      &lt;<span class="fn">button</span>
+        onClick={reset}
+        className=<span class="str">"px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"</span>
+      &gt;
+        Try again
+      &lt;/<span class="fn">button</span>&gt;
+    &lt;/<span class="fn">div</span>&gt;
+  )
+}</code></pre>
+
+  <h2>NASA API rate limit handling</h2>
+  <pre><code><span class="cm">// In src/lib/nasa.ts — enhanced nasaFetch with retry logic</span>
+<span class="kw">async function</span> <span class="fn">nasaFetch</span>&lt;T&gt;(
+  path: <span class="ty">string</span>,
+  schema: { parse: (data: <span class="ty">unknown</span>) => T },
+  params: <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">string</span>&gt; = {},
+  retries = <span class="num">2</span>,
+): <span class="ty">Promise</span>&lt;T&gt; {
+  <span class="kw">const</span> url = <span class="kw">new</span> <span class="ty">URL</span>(`<span class="str">${BASE}${path}</span>`)
+  url.searchParams.set(<span class="str">'api_key'</span>, process.env.<span class="vr">NASA_API_KEY</span> ?? <span class="str">'DEMO_KEY'</span>)
+  <span class="ty">Object</span>.entries(params).forEach(([k, v]) => url.searchParams.set(k, v))
+
+  <span class="kw">for</span> (<span class="kw">let</span> attempt = <span class="num">0</span>; attempt &lt;= retries; attempt++) {
+    <span class="kw">const</span> res = <span class="kw">await</span> <span class="fn">fetch</span>(url.toString(), {
+      next: { revalidate: <span class="num">3600</span> },
+    })
+
+    <span class="kw">if</span> (res.status === <span class="num">429</span>) {
+      <span class="cm">// Rate limited — respect the Retry-After header</span>
+      <span class="kw">const</span> retryAfter = <span class="ty">Number</span>(res.headers.<span class="fn">get</span>(<span class="str">'Retry-After'</span>) ?? <span class="num">60</span>)
+      <span class="kw">if</span> (attempt &lt; retries) {
+        <span class="kw">await</span> <span class="kw">new</span> <span class="ty">Promise</span>((r) => setTimeout(r, retryAfter * <span class="num">1000</span>))
+        <span class="kw">continue</span>
+      }
+      <span class="kw">throw new</span> <span class="ty">Error</span>(<span class="str">`NASA API rate limited. Retry after ${retryAfter}s`</span>)
+    }
+
+    <span class="kw">if</span> (!res.ok) {
+      <span class="kw">throw new</span> <span class="ty">Error</span>(`<span class="str">NASA API ${res.status}: ${res.statusText}</span>`)
+    }
+
+    <span class="kw">const</span> json = <span class="kw">await</span> res.json()
+    <span class="kw">return</span> schema.parse(json)
+  }
+
+  <span class="kw">throw new</span> <span class="ty">Error</span>(<span class="str">'NASA API fetch failed after retries'</span>)
+}</code></pre>
+
+  <div class="callout callout-tip">
+    <p><strong>Production observability tip:</strong> Add the error's <code>digest</code> (a hash Next.js generates for server-side errors) to your error page UI. When a user reports an issue, they can share the digest and you can correlate it with server logs instantly.</p>
+  </div>
+</div>
+
+<!-- ── SECTION 12: Deployment ── -->
+<div class="section" id="s12">
+  <h1>Deployment</h1>
+
+  <h2>Vercel (recommended)</h2>
+  <pre><code><span class="cm"># Install Vercel CLI</span>
+npm i -g vercel
+
+<span class="cm"># Deploy (first time sets up project)</span>
+vercel
+
+<span class="cm"># Set environment variables</span>
+vercel env add NASA_API_KEY production
+vercel env add DATABASE_URL production
+vercel env add CRON_SECRET production</code></pre>
+
+  <h2>Database options</h2>
+  <table class="schema-table">
+    <thead><tr><th>Service</th><th>Free tier</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Neon</td><td>0.5 GB storage, branches</td><td>Best DX, instant branching for preview envs</td></tr>
+      <tr><td>Supabase</td><td>500 MB, 2 projects</td><td>Includes Auth, Storage, Realtime</td></tr>
+      <tr><td>Vercel Postgres</td><td>256 MB</td><td>Zero-config with Vercel, powered by Neon</td></tr>
+      <tr><td>Railway</td><td>$5 credit/month</td><td>Simple, great DX, predictable billing</td></tr>
+    </tbody>
+  </table>
+
+  <h2>next.config.ts — image domains</h2>
+  <pre><code><span class="kw">import</span> { <span class="kw">type</span> <span class="ty">NextConfig</span> } <span class="kw">from</span> <span class="str">'next'</span>
+
+<span class="kw">const</span> config: <span class="ty">NextConfig</span> = {
+  images: {
+    remotePatterns: [
+      {
+        protocol:  <span class="str">'https'</span>,
+        hostname:  <span class="str">'apod.nasa.gov'</span>,  <span class="cm">// APOD image CDN</span>
+      },
+      {
+        protocol:  <span class="str">'https'</span>,
+        hostname:  <span class="str">'www.youtube.com'</span>,  <span class="cm">// Some APODs are YouTube videos</span>
+      },
+    ],
+  },
+}
+
+<span class="kw">export default</span> config</code></pre>
+
+  <h2>Production checklist</h2>
+  <ul>
+    <li>✅ NASA API key in env vars (never committed to git)</li>
+    <li>✅ <code>CRON_SECRET</code> is a long random string (run <code>openssl rand -hex 32</code>)</li>
+    <li>✅ <code>prisma migrate deploy</code> runs in your CI/CD pipeline (not <code>migrate dev</code>)</li>
+    <li>✅ Vercel cron configured in <code>vercel.json</code></li>
+    <li>✅ Next.js Image domains configured for NASA CDN</li>
+    <li>✅ <code>force-dynamic</code> or <code>revalidate</code> set appropriately per route</li>
+    <li>✅ Error boundaries in place for APOD and asteroid sections</li>
+    <li>✅ <code>SyncLog</code> table monitored — alert on consecutive failures</li>
+  </ul>
+
+  <div class="callout callout-mentor">
+    <p><strong>Final mentor note:</strong> The patterns here — Zod validation at API boundaries, cache-aside with DB-as-cache, React <code>cache()</code> for deduplication, concurrent <code>Promise.all</code> fetching, and <code>Suspense</code> streaming — aren't specific to this project. They're a reusable architecture for any data-intensive Next.js app. Master these and you'll apply them everywhere.</p>
+  </div>
+</div>
+
+</main>
+</div>
+
+<script>
+const items = document.querySelectorAll('.nav-item')
+const sections = document.querySelectorAll('.section')
+
+items.forEach(item => {
+  item.addEventListener('click', () => {
+    const target = item.dataset.section
+    items.forEach(i => i.classList.remove('active'))
+    sections.forEach(s => s.classList.remove('active'))
+    item.classList.add('active')
+    document.getElementById(target).classList.add('active')
+    window.scrollTo({ top: 0 })
+  })
+})
+
+// Copy button for code blocks
+document.querySelectorAll('pre').forEach(pre => {
+  const btn = document.createElement('button')
+  btn.className = 'copy-btn'
+  btn.textContent = 'Copy'
+  btn.addEventListener('click', () => {
+    const code = pre.querySelector('code')
+    const text = code ? code.innerText : pre.innerText
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!'
+      setTimeout(() => btn.textContent = 'Copy', 2000)
+    })
+  })
+  pre.appendChild(btn)
+})
+</script>
+</body>
+</html>
