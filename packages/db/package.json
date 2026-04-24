@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.39",
+    "dotenv": "^17.4.2",
     "prisma": "^7.8.0"
   }
 }
