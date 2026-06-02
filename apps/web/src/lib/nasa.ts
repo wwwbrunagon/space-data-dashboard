@@ -1,5 +1,10 @@
 import { cache } from 'react';
-import { ApodSchema, type Apod } from '@/types/nasa';
+import {
+	ApodSchema,
+	NeoFeedSchema,
+	type Apod,
+	type NeoFeed,
+} from '@/types/nasa';
 
 const NASA_BASE = 'https://api.nasa.gov';
 
@@ -38,3 +43,13 @@ export const fetchApod = cache(async (date?: string): Promise<Apod> => {
 	const params: Record<string, string> = date ? { date } : {};
 	return nasaFetch('/planetary/apod', params, ApodSchema);
 });
+
+export const fetchNeoFeed = cache(
+	async (start_date: string, end_date: string): Promise<NeoFeed> => {
+		return nasaFetch(
+			'/neo/rest/v1/feed',
+			{ start_date, end_date },
+			NeoFeedSchema,
+		);
+	},
+);

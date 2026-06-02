@@ -5,8 +5,53 @@
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client/.prisma/client"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model ApodSnapshot {
+  date           String   @id
+  title          String
+  explanation    String
+  url            String
+  hdurl          String?
+  mediaType      String
+  serviceVersion String
+  copyright      String?
+  raw            Json
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Asteroid {
+  id                         String   @id @default(cuid())
+  neoReferenceId             String
+  name                       String
+  nasaJplUrl                 String
+  isPotentiallyHazardous     Boolean
+  absoluteMagnitude          Float
+  estimatedDiameter          Json
+  closeApproachDate          DateTime
+  relativeVelocity           Json
+  missDistance               Json
+  orbitingBody               String
+  raw                        Json
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  @@index([closeApproachDate])
+  @@unique([neoReferenceId, closeApproachDate])
+}
+
+model SyncLog {
+  id           String   @id @default(cuid())
+  syncType     String
+  status       String
+  errorMessage String?
+  details      Json?
+  durationMs   Int
+  ranAt        DateTime @default(now())
 }
