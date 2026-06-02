@@ -68,6 +68,21 @@ export async function getAsteroidsByRange(startDate: string, endDate: string) {
 	});
 }
 
+export async function getAsteroidsForNextWeek() {
+	const startDate = getToday();
+	const endDate = formatIsoDate(addDays(parseISO(startDate), 7));
+	const cached = await getAsteroidsByRange(startDate, endDate);
+
+	if (cached.length > 0) {
+		return cached;
+	}
+
+	const feed = await fetchNeoFeed(startDate, endDate);
+	await syncAsteroidFeed(feed);
+
+	return getAsteroidsByRange(startDate, endDate);
+}
+
 function normalizeFeedAsteroids(feed: NeoFeed) {
 	const rows: Array<{
 		neoReferenceId: string;
