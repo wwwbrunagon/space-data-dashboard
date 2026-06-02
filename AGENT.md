@@ -1,421 +1,708 @@
-# AGENT.md — Space Dashboard Monorepo
+# Space Data Dashboard — AGENT.md
 
-This file is the authoritative reference for AI agents and contributors working in this repository. Read it fully before making any changes.
-
----
-
-## Repository Type
-
-**Monorepo.** All packages, apps, and services live in a single repository managed with a shared toolchain. Do not split packages into separate repos.
+Complete reference guide for developing and deploying the Space Data Dashboard. Read this before contributing.
 
 ---
 
-## Monorepo Structure
+## Project Overview
+
+**Space Data Dashboard** is a production-grade full-stack Next.js 15 application that displays NASA's Astronomy Photo of the Day (APOD) and near-Earth asteroid data. The dashboard features a PostgreSQL historical archive, intelligent multi-layer caching, and a daily cron-based background sync job.
+
+### What You'll Build
+
+- **APOD Display**: Daily Astronomy Photo of the Day with title, explanation, and copyright attribution
+- **Asteroid Tracking**: Filterable, sortable table of near-Earth objects (NEOs) for the next 7 days
+- **Historical Archive**: PostgreSQL stores every daily fetch for queryable history
+- **Smart Caching**: 3-layer cache strategy (Next.js fetch cache, PostgreSQL, React cache())
+- **Background Sync**: Daily cron job pre-populates data before user traffic arrives
+- **Type-Safe API Integration**: Zod runtime validation + TypeScript ensures API responses match expected shapes
+- **Quota Management**: Stays within NASA's 1,000 requests/day free tier
+
+### Architecture Stack
+
+| Component    | Technology     | Version | Purpose                            |
+| ------------ | -------------- | ------- | ---------------------------------- |
+| Framework    | Next.js 15     | 15.x    | Server Components, Route Handlers  |
+| Language     | TypeScript     | 5.x     | Full end-to-end type safety        |
+| Frontend UI  | React 18       | 18.x    | Server & Client Components         |
+| Styling      | Tailwind CSS   | 3.x     | Utility-first CSS                  |
+| Database ORM | Prisma         | 5.x     | Type-safe DB queries               |
+| Database     | PostgreSQL     | 16.x    | Primary data store                 |
+| Validation   | Zod            | 3.x     | Runtime schema validation          |
+| Dates        | date-fns       | 3.x     | Date formatting & manipulation     |
+| Query Client | TanStack Query | 5.x     | Client-side async state (optional) |
+| Package Mgr  | pnpm           | 9.x     | Fast workspace package manager     |
+| Build System | Turborepo      | latest  | Monorepo build orchestration       |
+| Deployment   | Vercel         | latest  | Hosting + cron jobs                |
+
+### Monorepo Structure
 
 ```
-space-dashboard/                  ← repo root
+space-dashboard/
 ├── apps/
-│   └── web/                      ← Next.js 15 dashboard (App Router)
+│   └── web/                      ← Next.js 15 dashboard
 │       ├── src/
 │       │   ├── app/
-│       │   │   ├── page.tsx                  ← Dashboard entry (Server Component)
-│       │   │   ├── error.tsx                 ← Error boundary (Client Component)
+│       │   │   ├── page.tsx                    ← Dashboard (Server Component)
+│       │   │   ├── error.tsx                   ← Error boundary
+│       │   │   ├── globals.css                 ← Global styles
 │       │   │   └── api/
-│       │   │       ├── apod/route.ts         ← GET /api/apod?date=YYYY-MM-DD
-│       │   │       ├── asteroids/route.ts    ← GET /api/asteroids?start=&end=
-│       │   │       └── cron/sync/route.ts    ← POST /api/cron/sync (protected)
+│       │   │       ├── apod/route.ts           ← GET /api/apod?date=YYYY-MM-DD
+│       │   │       ├── asteroids/route.ts      ← GET /api/asteroids?start=&end=
+│       │   │       └── cron/sync/route.ts      ← POST /api/cron/sync (protected)
 │       │   ├── components/
-│       │   │   ├── ApodCard.tsx              ← Server Component
-│       │   │   ├── AsteroidTable.tsx         ← Client Component (filtering/sort)
-│       │   │   └── HistoryCalendar.tsx       ← Client Component
+│       │   │   ├── ApodCard.tsx                ← Server Component
+│       │   │   ├── AsteroidTable.tsx           ← Client Component
+│       │   │   └── HistoryCalendar.tsx         ← Client Component (optional)
 │       │   ├── lib/
-│       │   │   ├── nasa.ts                   ← NASA API client
-│       │   │   ├── db.ts                     ← Prisma client singleton
-│       │   │   └── queries.ts                ← Typed DB query functions
+│       │   │   ├── nasa.ts                     ← NASA API client
+│       │   │   ├── db.ts                       ← Prisma singleton
+│       │   │   └── queries.ts                  ← Query functions with cache()
 │       │   └── types/
-│       │       └── nasa.ts                   ← Zod schemas + inferred types
+│       │       └── nasa.ts                     ← Zod schemas
 │       ├── next.config.ts
+│       ├── vercel.json                         ← Cron config
 │       └── package.json
 ├── packages/
-│   ├── db/                        ← Prisma schema, migrations, generated client
+│   ├── db/
 │   │   ├── prisma/
-│   │   │   ├── schema.prisma
+│   │   │   ├── schema.prisma                   ← 3 tables: apod_snapshots, asteroids, sync_log
 │   │   │   └── migrations/
 │   │   ├── src/
-│   │   │   └── index.ts           ← Re-exports db client + query helpers
+│   │   │   └── client.ts                       ← Prisma export
 │   │   └── package.json
-│   ├── types/                     ← Shared Zod schemas and TypeScript types
-│   │   ├── src/
-│   │   │   └── nasa.ts
-│   │   └── package.json
-│   └── config/                    ← Shared ESLint, TypeScript, Tailwind configs
-│       ├── eslint/
-│       ├── typescript/
-│       └── tailwind/
-├── turbo.json                     ← Turborepo pipeline config
-├── pnpm-workspace.yaml            ← pnpm workspace definition
-├── package.json                   ← Root package.json (devDependencies, scripts)
-└── .env.local                     ← Secrets (never committed)
+│   └── config/                   ← Shared linting/typing configs
+├── turbo.json                    ← Build pipeline
+├── pnpm-workspace.yaml
+├── pnpm-lock.yaml
+└── .env.local                    ← NASA_API_KEY, DATABASE_URL, CRON_SECRET
+
 ```
+
+### Key Design Decisions
+
+**Why Next.js App Router?**
+Server Components enable server-side data fetching before HTML rendering, eliminating loading spinners for initial page loads. Route Handlers replace a separate Express server, collapsing a 3-service architecture (frontend + BFF + API) into one coherent Next.js app.
+
+**Why Prisma over raw SQL?**
+Auto-generated TypeScript types for query results eliminate type-drift. Migrations are handled cleanly without manual SQL maintenance. At this project's scale (3 tables), raw SQL would work fine, but Prisma provides type safety and future scalability.
+
+**Why PostgreSQL over SQLite?**
+
+- JSON columns for flexible NASA response caching
+- Full-text search capability (future feature)
+- Cloud deployment trivial (Vercel Postgres, Supabase, Neon all support Postgres)
+
+**Why Zod validation at API boundaries?**
+NASA's public API can change without notice. Zod validates responses at runtime, converting potential crashes into handled errors with meaningful messages.
 
 ---
 
-## Package Manager
+## Build and Test Commands
 
-**pnpm** with workspaces. Never use `npm` or `yarn` in this repo.
+### Development Setup
 
 ```bash
-# Install all dependencies from root
+# Install dependencies (use pnpm, never npm/yarn)
 pnpm install
 
-# Run a script in a specific workspace
-pnpm --filter @space/web dev
-pnpm --filter @space/db migrate
+# Create .env.local in project root
+cat > .env.local << EOF
+NASA_API_KEY=your_key_from_api.nasa.gov
+DATABASE_URL="postgresql://user:password@localhost:5432/spacedash"
+CRON_SECRET=$(openssl rand -hex 32)
+EOF
 
-# Add a dependency to a specific package
-pnpm --filter @space/web add date-fns
-pnpm --filter @space/web add -D @types/node
-```
-
-### Workspace package names
-
-| Directory              | Package name       |
-|------------------------|--------------------|
-| `apps/web`             | `@space/web`       |
-| `packages/db`          | `@space/db`        |
-| `packages/types`       | `@space/types`     |
-| `packages/config`      | `@space/config`    |
-
----
-
-## Build System
-
-**Turborepo** orchestrates the build pipeline. All tasks are defined in `turbo.json`.
-
-```bash
-# Dev (all apps in parallel)
-pnpm dev
-
-# Build all packages and apps in dependency order
-pnpm build
-
-# Type-check the entire repo
-pnpm typecheck
-
-# Lint the entire repo
-pnpm lint
-
-# Run DB migrations
+# Initialize Prisma and apply migrations
 pnpm db:migrate
 
-# Open Prisma Studio
+# (Optional) Open database browser
 pnpm db:studio
 ```
 
-### Turborepo pipeline (`turbo.json`)
+### Running Locally
 
-```json
-{
-  "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
-    "build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true
-    },
-    "typecheck": {
-      "dependsOn": ["^build"]
-    },
-    "lint": {}
-  }
+```bash
+# Start development server (http://localhost:3000)
+pnpm dev
+
+# Watches for file changes, hot-reloads
+# Prisma Client auto-generated on startup
+# Database migrations applied automatically
+
+# In another terminal, manually trigger cron sync:
+curl -X POST http://localhost:3000/api/cron/sync \
+  -H "Authorization: Bearer your-cron-secret"
+```
+
+### Production Build
+
+```bash
+# Build optimized production bundle
+pnpm build
+
+# Start production server
+pnpm start
+
+# Or build and test locally
+pnpm build && pnpm start
+```
+
+### Database Commands
+
+```bash
+# After editing prisma/schema.prisma:
+pnpm db:migrate
+
+# Apply existing migrations to prod (use in CI/CD):
+pnpm db:migrate:deploy
+
+# Reset local database (DESTRUCTIVE):
+pnpm db:reset
+
+# View migration history:
+pnpm db:status
+```
+
+### NASA API Configuration
+
+```bash
+# Get free API key
+# 1. Visit https://api.nasa.gov
+# 2. Register (instant, no approval needed)
+# 3. Copy API key to .env.local
+
+# Generate CRON_SECRET
+openssl rand -hex 32
+
+# Test NASA API directly
+curl "https://api.nasa.gov/planetary/apod?api_key=YOUR_KEY&date=2025-04-14"
+```
+
+### Testing Endpoints
+
+```bash
+# Test APOD endpoint
+curl http://localhost:3000/api/apod
+curl "http://localhost:3000/api/apod?date=2025-04-14"
+
+# Test asteroids endpoint
+curl http://localhost:3000/api/asteroids
+curl "http://localhost:3000/api/asteroids?start=2025-04-14&end=2025-04-21"
+
+# Check response headers (X-Cache: HIT or MISS)
+curl -v http://localhost:3000/api/apod
+
+# Test cron endpoint
+curl -X POST http://localhost:3000/api/cron/sync \
+  -H "Authorization: Bearer your-cron-secret"
+
+# Test invalid input
+curl "http://localhost:3000/api/apod?date=invalid"
+# Expected: 400 with error message
+```
+
+---
+
+## Code Style Guidelines
+
+### TypeScript Best Practices
+
+**Single source of truth for types**:
+
+```typescript
+// ✅ GOOD: Define Zod schema, infer TypeScript type
+export const ApodSchema = z.object({
+	title: z.string(),
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	url: z.string().url(),
+});
+
+export type Apod = z.infer<typeof ApodSchema>;
+
+// ✅ GOOD: Derived Prisma query types
+export type ApodSnapshotRow = Prisma.ApodSnapshotGetPayload<{}>;
+
+// ❌ BAD: Manual interfaces that drift from reality
+interface ApodResponse {
+	title: string;
+	date: string;
+	url: string;
 }
 ```
 
-> `^build` means: build all upstream dependencies first. `@space/web` depends on `@space/db` and `@space/types`, so those build first automatically.
+**Use `Prisma.GetPayload` for accurate query shapes**:
 
----
+```typescript
+// ✅ GOOD: Accounts for select/include modifiers
+export type AsteroidRow = Prisma.AsteroidGetPayload<{}>;
 
-## Tech Stack
+// ✅ GOOD: Honest typing with Pick<>
+export async function getRecentApodHistory(limit = 30) {
+	const result = await db.apodSnapshot.findMany({
+		orderBy: { date: 'desc' },
+		take: limit,
+		select: { date: true, title: true, url: true },
+	});
+	return result as Promise<Pick<ApodSnapshotRow, 'date' | 'title' | 'url'>[]>;
+}
 
-| Layer         | Technology              | Version  |
-|---------------|-------------------------|----------|
-| Framework     | Next.js (App Router)    | 15.x     |
-| Language      | TypeScript              | 5.x      |
-| Styling       | Tailwind CSS            | 3.x      |
-| ORM           | Prisma                  | 5.x      |
-| Database      | PostgreSQL              | 16.x     |
-| Validation    | Zod                     | 3.x      |
-| Date utils    | date-fns                | 3.x      |
-| Client state  | TanStack Query          | 5.x      |
-| Build system  | Turborepo               | latest   |
-| Package mgr   | pnpm                    | 9.x      |
-
----
-
-## Environment Variables
-
-Secrets live in `.env.local` at the **repo root** and are shared across apps. Never commit this file.
-
-```bash
-# .env.local
-NASA_API_KEY=your_key_from_api.nasa.gov
-DATABASE_URL="postgresql://user:password@localhost:5432/spacedash"
-CRON_SECRET=a-long-random-string-generate-with-openssl-rand-hex-32
+// ❌ BAD: Lies to TypeScript
+const result = await db.apodSnapshot.findMany({ select: { date: true } });
+const typed: ApodSnapshotRow[] = result as ApodSnapshotRow[];
 ```
 
-- `NASA_API_KEY` — Register free at api.nasa.gov. Do **not** use `DEMO_KEY` in development (30 req/hour limit).
-- `DATABASE_URL` — Postgres connection string. Locally use Docker; in production use Neon / Supabase / Vercel Postgres.
-- `CRON_SECRET` — Bearer token protecting the `/api/cron/sync` endpoint.
+**Never use `any`**. Use `unknown` and narrow it:
 
-> **Security rule:** Never reference `NASA_API_KEY` or `CRON_SECRET` in any `'use client'` file. All NASA API calls happen in Server Components or Route Handlers only.
+```typescript
+// ✅ GOOD
+function handle(value: unknown) {
+	if (typeof value === 'string') {
+		console.log(value.toUpperCase());
+	}
+}
 
----
-
-## Database (`packages/db`)
-
-The `@space/db` package owns the Prisma schema, migrations, and exports a typed client singleton.
-
-### Schema overview
-
-| Table            | Primary key            | Purpose                              |
-|------------------|------------------------|--------------------------------------|
-| `apod_snapshots` | `date` (natural, YYYY-MM-DD) | One APOD entry per calendar day |
-| `asteroids`      | `nasaId` (NASA string ID)    | Near-Earth Object records        |
-| `sync_log`       | `id` (autoincrement)         | Cron audit log                   |
-
-### Migration workflow
-
-```bash
-# Development — creates migration file and applies it
-pnpm --filter @space/db exec prisma migrate dev --name <description>
-
-# Production — applies existing migrations only (use in CI/CD)
-pnpm --filter @space/db exec prisma migrate deploy
-
-# Generate Prisma client after schema changes (usually automatic)
-pnpm --filter @space/db exec prisma generate
-```
-
-### Key schema rules
-
-- `ApodSnapshot.date` is the `@id` — upserting by date is idempotent by design.
-- `Asteroid.nasaId` is the `@id` — use NASA's own stable string IDs, not a surrogate.
-- Always store `rawData Json` alongside typed columns. This future-proofs against NASA API schema changes without requiring a back-fill.
-- Indexes on `asteroids.closeApproachDate` and `asteroids.isPotentiallyHazardous` are required — the most common query filters.
-
----
-
-## Caching Architecture
-
-Three layers operate together. Do not bypass or reorder them.
-
-1. **Next.js fetch cache** (`next: { revalidate: 3600 }`) — CDN/edge layer, 1-hour TTL on all NASA API calls.
-2. **PostgreSQL DB cache** — Primary cache. Every NASA response is upserted to the DB. Always query DB before calling the NASA API.
-3. **React `cache()`** — Deduplicates identical calls within a single server render pass. Wrap all query functions with `cache()`.
-
-```
-Request → Check DB → Hit? Return from DB
-                   → Miss? Call NASA → Upsert DB → Return
-```
-
----
-
-## Component Rules
-
-### Server Components (default)
-- No `'use client'` directive.
-- Fetch data directly — DB queries, NASA API calls.
-- Never import or reference `process.env.NASA_API_KEY` in any component marked `'use client'`.
-- Use `async/await` at the component level.
-
-### Client Components
-- Require `'use client'` at the top of the file.
-- Only used when the feature requires browser APIs, `useState`, `useEffect`, or event handlers (e.g., table sorting/filtering, interactive calendar).
-- Receive initial data as props from a parent Server Component — do **not** fetch on mount unless the user has triggered a new query.
-
-### Data fetching pattern
-
-```
-DashboardPage (Server Component)
-  ├── Fetches all data concurrently with Promise.all
-  ├── ApodCard (Server Component) — wrapped in <Suspense>
-  └── AsteroidTable (Client Component) — receives initialAsteroids as props
-```
-
----
-
-## API Routes
-
-| Route                  | Method | Auth           | Description                          |
-|------------------------|--------|----------------|--------------------------------------|
-| `/api/apod`            | GET    | None           | Cache-aside APOD fetch by date       |
-| `/api/asteroids`       | GET    | None           | Cache-aside asteroid fetch by range  |
-| `/api/cron/sync`       | POST   | Bearer token   | Sync APOD + asteroids, log result    |
-
-### Cron security
-
-The `/api/cron/sync` endpoint validates the `Authorization: Bearer <CRON_SECRET>` header before doing any work. Return `401` immediately if it doesn't match. Never remove this check.
-
-### Cron schedule
-
-Configured in `apps/web/vercel.json`:
-
-```json
-{
-  "crons": [
-    {
-      "path": "/api/cron/sync",
-      "schedule": "0 1 * * *"
-    }
-  ]
+// ❌ BAD
+function handle(value: any) {
+	console.log(value.toUpperCase()); // Unsafe
 }
 ```
 
-Runs at 01:00 UTC daily — 1 hour after NASA publishes the new APOD at midnight UTC. This avoids caching a stale response.
+### Server vs Client Components
 
----
-
-## TypeScript Conventions
-
-- **Never use `any`.** Use `unknown` and narrow it.
-- **Prefer `Prisma.ModelGetPayload<{}>` over raw model types** — it accounts for `select`/`include` modifiers and is more precise.
-- **Infer types from Zod schemas** — define the schema, then `type Foo = z.infer<typeof FooSchema>`. No manual interface maintenance for external API responses.
-- **Use `Pick<>` honestly** — if a query uses `select`, the return type must reflect only those fields.
-- **No `as` casts to lie to the compiler.** The only acceptable `as` usage is the Prisma `rawData` cast: `value as unknown as Record<string, unknown>`.
-
----
-
-## Coding Patterns
-
-### Concurrent DB queries — always use `Promise.all`
+**Server Components are the default** (no `'use client'` directive needed):
 
 ```typescript
-// ✅ Correct — concurrent, ~30ms total
-const [asteroids, syncStatus] = await Promise.all([
-  getAsteroidsByDateRange(today, nextWeek),
-  getLastSyncStatus(),
-])
+// ✅ GOOD: Server Component (default in App Router)
+// src/components/ApodCard.tsx
+export default async function ApodCard({ date }: Props) {
+  const apod = await getApodByDate(date) // DB query OK
+  return <article>...</article>
+}
 
-// ❌ Wrong — sequential waterfall, ~50ms total
-const asteroids = await getAsteroidsByDateRange(today, nextWeek)
-const syncStatus = await getLastSyncStatus()
+// ✅ GOOD: Client Component (explicit)
+// src/components/AsteroidTable.tsx
+'use client'
+export default function AsteroidTable({ initialAsteroids }: Props) {
+  const [showHazardous, setShowHazardous] = useState(false) // useState OK
+  return <table>...</table>
+}
+
+// ❌ BAD: Never expose secrets in 'use client' files
+'use client'
+const key = process.env.NASA_API_KEY // Next.js errors at build time
 ```
 
-### Upsert with empty `update` — idempotent insert
+### Data Fetching Patterns
+
+**Fetch at the top, pass down as props**:
 
 ```typescript
-// Inserts if not exists, does nothing on conflict
+// ✅ GOOD: Concurrent fetches at page level
+export default async function DashboardPage() {
+  const [asteroids, syncStatus] = await Promise.all([
+    getAsteroidsByDateRange(today, nextWeek),
+    getLastSyncStatus(),
+  ])
+  // Total time: ~30ms (concurrent)
+  return <Dashboard asteroids={asteroids} syncStatus={syncStatus} />
+}
+
+// ❌ BAD: Sequential awaits
+const asteroids = await getAsteroidsByDateRange(today, nextWeek) // 30ms
+const syncStatus = await getLastSyncStatus() // 20ms
+// Total time: ~50ms (sequential waterfall)
+```
+
+**Use React `cache()` for deduplication within render**:
+
+```typescript
+// ✅ GOOD: Deduplicates within single render pass
+export const getApodByDate = cache(async (date: string) =>
+	db.apodSnapshot.findUnique({ where: { date } }),
+);
+
+// If ApodCard and page title both call getApodByDate("2025-04-14"),
+// the DB is only hit once per render
+```
+
+### Validation at API Boundaries
+
+**Always validate external data with Zod**:
+
+```typescript
+// ✅ GOOD: Runtime validation before use
+async function nasaFetch<T>(
+	path: string,
+	schema: { parse: (data: unknown) => T },
+): Promise<T> {
+	const res = await fetch(`${BASE}${path}?api_key=${key}`);
+	if (!res.ok) throw new Error(`NASA API ${res.status}`);
+
+	const json = await res.json();
+	return schema.parse(json); // Zod validates + transforms
+}
+
+// ✅ GOOD: Transform during parsing
+const CloseApproachSchema = z.object({
+	relative_velocity: z.object({
+		kilometers_per_hour: z.string().transform(Number), // String → Number at parse time
+	}),
+});
+```
+
+### Caching Strategy (3 Layers)
+
+```typescript
+// Layer 1: Next.js fetch cache (edge, 1-hour TTL)
+const res = await fetch(url, { next: { revalidate: 3600 } });
+
+// Layer 2: PostgreSQL (primary cache, always query DB first)
+export async function GET(req: NextRequest) {
+	const cached = await db.apodSnapshot.findUnique({ where: { date } });
+	if (cached)
+		return NextResponse.json(cached, { headers: { 'X-Cache': 'HIT' } });
+
+	// If miss, fetch and persist
+	const apod = await fetchApod(date);
+	await db.apodSnapshot.upsert({
+		where: { date },
+		create: { ...apod },
+		update: {}, // Idempotent no-op
+	});
+	return NextResponse.json(apod, { headers: { 'X-Cache': 'MISS' } });
+}
+
+// Layer 3: React cache() (deduplicates within render)
+export const getApodByDate = cache(async (date: string) => {
+	return db.apodSnapshot.findUnique({ where: { date } });
+});
+```
+
+### Idempotent Upserts
+
+```typescript
+// ✅ GOOD: Empty update block is intentional (insert-if-not-exists)
 await db.apodSnapshot.upsert({
   where:  { date },
-  create: { ...data },
-  update: {},           // ← intentional no-op
+  create: { date, title, explanation, ... },
+  update: {}, // ← No-op on conflict
 })
 ```
 
-### Zod validation at API boundaries
-
-All external data (NASA API responses) must be parsed through a Zod schema before use. A parse failure surfaces a typed error with a meaningful message instead of a runtime crash deep in the app.
-
 ---
 
-## Adding a New Feature
+## Testing Instructions
 
-1. **New shared types** → add to `packages/types/src/`.
-2. **New DB table or column** → update `packages/db/prisma/schema.prisma`, run `pnpm db:migrate`, update `packages/db/src/index.ts` exports.
-3. **New API route** → add under `apps/web/src/app/api/`. Follow the cache-aside pattern.
-4. **New component** → default to Server Component. Only add `'use client'` if interactivity is required.
-5. **New cron task** → add to the existing `/api/cron/sync` handler and log to `SyncLog`.
+### Manual Integration Testing
 
----
-
-## What Not To Do
-
-- ❌ Do not add a new top-level `package.json` outside `apps/` or `packages/` — all packages must live in the monorepo workspace.
-- ❌ Do not call `npm install` or `yarn` — use `pnpm` only.
-- ❌ Do not call NASA API directly from a Client Component.
-- ❌ Do not skip `SyncLog` writes in cron tasks — the audit log is required for production observability.
-- ❌ Do not use `prisma migrate dev` in CI/CD — use `prisma migrate deploy`.
-- ❌ Do not store secrets in `apps/web/.env.local` separately — all env vars go in the root `.env.local`.
-- ❌ Do not use `DEMO_KEY` as the NASA API key in any environment.
-- ❌ Do not remove the `Suspense` boundary around `ApodCard` — it allows independent streaming of the two dashboard sections.
-
----
-
-## Local Development Setup
+#### APOD Endpoint
 
 ```bash
-# 1. Clone and install
-git clone <repo-url> space-dashboard
-cd space-dashboard
-pnpm install
+# Test today's APOD (should hit DB if pre-synced)
+curl http://localhost:3000/api/apod
+# Response: { date, title, explanation, url, mediaType, ... }
+# Header: X-Cache: HIT (from DB) or MISS (from NASA)
 
-# 2. Set up environment
-cp .env.example .env.local
-# Fill in NASA_API_KEY, DATABASE_URL, CRON_SECRET
+# Test specific date
+curl "http://localhost:3000/api/apod?date=2025-04-14"
 
-# 3. Start local Postgres (Docker recommended)
-docker run -d \
-  --name spacedash-pg \
-  -e POSTGRES_DB=spacedash \
-  -e POSTGRES_USER=user \
-  -e POSTGRES_PASSWORD=password \
-  -p 5432:5432 \
-  postgres:16
+# Test invalid format
+curl "http://localhost:3000/api/apod?date=invalid"
+# Response: 400 { error: "Invalid date format. Use YYYY-MM-DD" }
+```
 
-# 4. Run migrations and generate Prisma client
-pnpm db:migrate
+#### Asteroids Endpoint
 
-# 5. Start all apps
-pnpm dev
+```bash
+# Default range (today + 7 days)
+curl http://localhost:3000/api/asteroids
+# Response: { asteroids: [...], source: "db" | "api" }
 
-# App runs at http://localhost:3000
-# Prisma Studio at http://localhost:5555 (run: pnpm db:studio)
+# Custom date range
+curl "http://localhost:3000/api/asteroids?start=2025-04-14&end=2025-04-21"
+```
+
+#### Cron Sync Job
+
+```bash
+# Test locally with correct auth
+curl -X POST http://localhost:3000/api/cron/sync \
+  -H "Authorization: Bearer your-cron-secret"
+# Response: { synced: { apod: {...}, asteroids: {...} }, totalMs: 1234 }
+
+# Test without auth (should fail)
+curl -X POST http://localhost:3000/api/cron/sync
+# Response: 401 { error: "Unauthorized" }
+```
+
+### UI Testing (Manual)
+
+**APOD Card**
+
+- [ ] Renders without loading spinner (SSR)
+- [ ] Image displays correctly
+- [ ] Falls back to video iframe if `mediaType === 'video'`
+- [ ] Copyright shown if available
+- [ ] Date displayed correctly
+
+**Asteroid Table**
+
+- [ ] Initial data loads from props (no API call from browser)
+- [ ] Filter "hazardous only" works
+- [ ] Sort by clicking column headers
+- [ ] Pagination (prev/next buttons)
+- [ ] Correctly formatted numbers (locale-specific)
+
+**Error Handling**
+
+- [ ] Disconnect NASA API key → error message appears
+- [ ] DB connection fails → error boundary renders
+- [ ] "Try again" button resets component
+
+### Database Validation
+
+```bash
+# Check Prisma schema syntax
+npx prisma validate
+
+# View migration history
+npx prisma migrate status
+
+# Inspect last sync logs
+npx prisma db execute --stdin <<EOF
+SELECT * FROM sync_log ORDER BY ran_at DESC LIMIT 5;
+EOF
+
+# Count asteroids
+npx prisma db execute --stdin <<EOF
+SELECT COUNT(*) FROM asteroids;
+EOF
+
+# Verify today's APOD cached
+npx prisma db execute --stdin <<EOF
+SELECT date, title FROM apod_snapshots WHERE date = CURRENT_DATE;
+EOF
+```
+
+### Performance Testing
+
+```bash
+# Measure page load time
+curl -w "DNS: %{time_namelookup}s | Connect: %{time_connect}s | Total: %{time_total}s\n" \
+  -o /dev/null -s http://localhost:3000
+
+# Profile with Chrome DevTools
+# 1. Open http://localhost:3000
+# 2. DevTools → Performance → Record
+# 3. Look for LCP (Largest Contentful Paint) < 2.5s
 ```
 
 ---
 
-## Deployment (Vercel)
+## Security Considerations
 
-```bash
-npm i -g vercel
-vercel
+### API Key Management
 
-vercel env add NASA_API_KEY production
-vercel env add DATABASE_URL production
-vercel env add CRON_SECRET production
+**Never expose NASA_API_KEY to the browser**:
+
+```typescript
+// ✅ SECURE: Only in Server Components / Route Handlers
+export default async function ApodCard() {
+	const apod = await fetchApod(date); // Server-side only
+}
+
+// ✅ SECURE: Environment variable, never hardcoded
+// .env.local
+NASA_API_KEY = sk_live_xxxxx;
+
+// ❌ INSECURE: Exposed in 'use client' file (Next.js errors at build)
+('use client');
+const key = process.env.NASA_API_KEY;
+
+// ❌ INSECURE: Hardcoded in code
+const NASA_API_KEY = 'sk_live_xxxxx';
 ```
 
-Run `prisma migrate deploy` as a build step in Vercel — add it to `apps/web/package.json`:
+**Add to `.gitignore`**:
 
-```json
-{
-  "scripts": {
-    "build": "prisma migrate deploy && next build"
+```
+.env.local
+.env.*.local
+*.env
+```
+
+### Cron Job Protection
+
+**Protect `/api/cron/sync` with bearer token**:
+
+```typescript
+// ✅ SECURE: Validate CRON_SECRET on every request
+export async function POST(req: NextRequest) {
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  // Proceed with sync...
+}
+
+// ✅ GOOD: Generate strong token
+$ openssl rand -hex 32
+a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+
+// ✅ GOOD: Vercel cron automatically sends token in Authorization header
+```
+
+**Monitor for failures**:
+
+```typescript
+// Log every sync attempt
+await db.syncLog.create({
+	data: {
+		syncType: 'apod',
+		status: 'success' | 'error',
+		errorMessage: err ? String(err) : null,
+		durationMs: Date.now() - start,
+	},
+});
+
+// Alert if 3+ consecutive failures
+```
+
+### Rate Limiting & Quota Management
+
+**NASA free tier: 1,000 requests/day**:
+
+```typescript
+// ✅ GOOD: Multi-layer cache prevents quota exhaustion
+// Layer 1: Next.js fetch cache (revalidate: 3600) — 1 req/hour per edge region
+// Layer 2: PostgreSQL — 1 req per date (historical archive)
+// Layer 3: Cron pre-fetches before user traffic
+
+// ✅ GOOD: Respect Retry-After header
+if (res.status === 429) {
+	const retryAfter = Number(res.headers.get('Retry-After') ?? 60);
+	await new Promise((r) => setTimeout(r, retryAfter * 1000));
 }
 ```
 
-### Recommended managed Postgres providers
+### Database Connection Security
 
-| Service          | Free tier         | Notes                                 |
-|------------------|-------------------|---------------------------------------|
-| Neon             | 0.5 GB + branches | Best DX, instant preview branches     |
-| Supabase         | 500 MB            | Includes Auth, Storage, Realtime      |
-| Vercel Postgres  | 256 MB            | Zero-config with Vercel (Neon-backed) |
-| Railway          | $5 credit/month   | Simple, predictable billing           |
+**Connection pooling critical for serverless**:
+
+```typescript
+// ✅ SECURE: Prisma singleton (prevents connection leak on hot-reload)
+const createPrismaClient = () =>
+	new PrismaClient({
+		log:
+			process.env.NODE_ENV === 'development'
+				? ['query', 'error', 'warn']
+				: ['error'], // No query logs in prod
+	});
+
+declare global {
+	var prisma: ReturnType<typeof createPrismaClient> | undefined;
+}
+
+export const db = globalThis.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+	globalThis.prisma = db;
+}
+
+// ✅ SECURE: DATABASE_URL in environment variable only
+// .env.local
+DATABASE_URL = 'postgresql://user:password@localhost:5432/spacedash';
+
+// ✅ GOOD: Connection pooling for serverless (use Neon, Vercel Postgres, etc.)
+DATABASE_URL = 'postgresql://user:password@pgbouncer-host:6432/spacedash';
+```
+
+### Error Response Security
+
+**Don't leak sensitive information**:
+
+```typescript
+// ✅ GOOD: Generic error to client, detailed log server-side
+try {
+	return NextResponse.json(data);
+} catch (err) {
+	console.error('[APOD API]', err); // Full error in server logs only
+	return NextResponse.json(
+		{ error: 'Failed to fetch APOD data' },
+		{ status: 502 },
+	);
+}
+
+// ❌ BAD: Exposes implementation details
+return NextResponse.json({ error: String(err) }, { status: 500 });
+```
+
+### Input Validation
+
+**Validate all user inputs before processing**:
+
+```typescript
+// ✅ GOOD: Date format validation before API call
+if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+	return NextResponse.json(
+		{ error: 'Invalid date format. Use YYYY-MM-DD' },
+		{ status: 400 },
+	);
+}
+
+// ✅ GOOD: Zod schema validation at boundaries
+const parsed = AsteroidSchema.parse(nasaResponse);
+```
+
+### Secure Headers
+
+```typescript
+// next.config.ts
+import { type NextConfig } from 'next';
+
+const config: NextConfig = {
+	headers: async () => [
+		{
+			source: '/:path*',
+			headers: [
+				{ key: 'X-Content-Type-Options', value: 'nosniff' },
+				{ key: 'X-Frame-Options', value: 'DENY' },
+				{ key: 'X-XSS-Protection', value: '1; mode=block' },
+				{ key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+			],
+		},
+	],
+};
+
+export default config;
+```
+
+### Production Deployment Checklist
+
+- [ ] `NASA_API_KEY` in Vercel environment variables (never in code)
+- [ ] `CRON_SECRET` ≥ 32 random bytes (`openssl rand -hex 32`)
+- [ ] `DATABASE_URL` uses strong password (generated by Neon/Supabase)
+- [ ] Migrations run via `prisma migrate deploy` (not `dev`) in CI/CD
+- [ ] Error logs sanitized (no stack traces to clients)
+- [ ] HTTPS enforced (Vercel default)
+- [ ] Cron failure monitoring configured
+- [ ] SyncLog alerts set up (consecutive failures)
+- [ ] NASA API rate limits respected (1-hour TTL on fetches)
+- [ ] No secrets in `vercel.json`, `.next/`, or `package.json`
+- [ ] No `DEMO_KEY` references in any environment
 
 ---
 
-## Production Checklist
+## Additional Resources
 
-- [ ] `NASA_API_KEY` set in Vercel env vars — never in source code
-- [ ] `CRON_SECRET` is 32+ random bytes (`openssl rand -hex 32`)
-- [ ] `prisma migrate deploy` runs in build, not `migrate dev`
-- [ ] Vercel cron configured in `apps/web/vercel.json`
-- [ ] `next.config.ts` includes `apod.nasa.gov` in `remotePatterns`
-- [ ] `SyncLog` monitored — alert on two or more consecutive `status: 'error'` rows
-- [ ] Error boundaries (`error.tsx`) in place for both dashboard sections
-- [ ] No `DEMO_KEY` reference anywhere in the codebase (`grep -r DEMO_KEY .`)
+- [NASA API Docs](https://api.nasa.gov) — Free registration, 1,000 req/day
+- [Next.js App Router](https://nextjs.org/docs/app) — Server Components, Route Handlers
+- [Prisma ORM](https://www.prisma.io/docs) — Database access layer
+- [Zod Runtime Validation](https://zod.dev) — Schema validation
+- [Vercel Cron](https://vercel.com/docs/cron-jobs) — Serverless cron jobs
+- [React Server Components](https://react.dev/reference/react/use-server)
+
+---
+
+**Last Updated**: June 2, 2026
